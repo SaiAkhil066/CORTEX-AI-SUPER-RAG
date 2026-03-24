@@ -51,6 +51,12 @@ def process_documents(uploaded_files,reranker,embedding_model, base_url):
         separator="\n"
     )
     texts = text_splitter.split_documents(documents)
+
+    # Check if documents were loaded successfully
+    if not texts:
+        st.error("No text content found in the uploaded documents. Please check if the files are valid.")
+        return
+
     text_contents = [doc.page_content for doc in texts]
 
     # 🚀 Hybrid Retrieval Setup
