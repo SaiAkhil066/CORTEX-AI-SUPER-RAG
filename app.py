@@ -150,6 +150,27 @@ st.markdown("""
         font-size: 0.86rem; margin-bottom: 0.4rem;
     }
 
+    /* ── Enterprise badge (fixed top-right) ── */
+    .ent-badge {
+        position: fixed; top: 12px; right: 18px; z-index: 9999;
+        display: flex; align-items: center; gap: 8px;
+        background: #0d2e1a; border: 1px solid #1f6f4a;
+        border-radius: 999px; padding: 6px 16px 6px 12px;
+        text-decoration: none; transition: all .2s;
+        box-shadow: 0 2px 12px rgba(45,212,191,0.12);
+    }
+    .ent-badge:hover {
+        background: #112e1e; border-color: #2dd4bf;
+        box-shadow: 0 4px 20px rgba(45,212,191,0.22);
+        transform: translateY(-1px);
+    }
+    .ent-dot { width: 7px; height: 7px; border-radius: 50%; background: #2dd4bf; flex-shrink: 0; }
+    .ent-text {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem; font-weight: 600; color: #2dd4bf;
+        letter-spacing: 0.06em; white-space: nowrap;
+    }
+
     /* ── Pipeline chips ── */
     .chip-row { display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin: 12px 0 4px; }
     .chip {
@@ -455,6 +476,15 @@ def _source_html(sources: list) -> str:
     )
     return cards
 
+
+# ─── Enterprise badge (fixed top-right) ──────────────────────────────────────
+st.markdown(
+    '<a href="https://cortex-rag-beta.vercel.app/" target="_blank" class="ent-badge">'
+    '<span class="ent-dot"></span>'
+    '<span class="ent-text">Enterprise Solutions ↗</span>'
+    '</a>',
+    unsafe_allow_html=True
+)
 
 # ─── Brand header ─────────────────────────────────────────────────────────────
 st.markdown(
