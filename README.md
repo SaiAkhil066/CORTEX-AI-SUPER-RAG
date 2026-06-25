@@ -178,8 +178,8 @@ Upload (PDF / DOCX / TXT)
 **1 &nbsp;—&nbsp; Clone**
 
 ```bash
-git clone https://github.com/SaiAkhil066/DeepSeek-RAG-Chatbot.git
-cd DeepSeek-RAG-Chatbot
+git clone https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG.git
+cd CORTEX-AI-SUPER-RAG
 ```
 
 **2 &nbsp;—&nbsp; Install**
@@ -327,9 +327,9 @@ docker-compose up
   <br/><br/>
   <a href="https://www.reddit.com/user/akhilpanja/">Reddit</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/SaiAkhil066/DeepSeek-RAG-Chatbot/issues">Issues</a>
+  <a href="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/issues">Issues</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/SaiAkhil066/DeepSeek-RAG-Chatbot/pulls">Pull Requests</a>
+  <a href="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/pulls">Pull Requests</a>
   <br/><br/>
   <sub><i>The future of retrieval-augmented AI is local — no internet required.</i></sub>
 </p>
