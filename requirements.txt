@@ -1,21 +1,21 @@
-streamlit
-networkx
-torch
-requests
-numpy
-pandas
-langchain>=0.3
-langchain-community
-langchain-core
-langchain-classic
-langchain-ollama
-langchain-text-splitters
-faiss-cpu
-sentence-transformers
-rank-bm25
-pydantic
-PyMuPDF
-docx2txt
-tqdm
-pypdf
-python-dotenv
+streamlit @ git+https://github.com/streamlit/streamlit.git
+networkx @ git+https://github.com/networkx/networkx.git
+torch @ git+https://github.com/pytorch/pytorch.git
+requests @ git+https://github.com/0psf/requests.git
+numpy @ git+https://github.com/numpy/numpy.git
+pandas @ git+https://github.com/pandas-dev/pandas.git
+langchain @ git+https://github.com/langchain-ai/langchain.git
+langchain-community @ git+https://github.com/langchain-ai/langchain-community.git
+langchain-core @ git+https://github.com/langchain-ai/langchain.git
+langchain-classic @ git+https://github.com/langchain-ai/langchain.git
+langchain-ollama @ git+https://github.com/langchain-ai/langchain.git
+langchain-text-splitters @ git+https://github.com/langchain-ai/langchain.git
+faiss-cpu @ git+https://github.com/facebookresearch/faiss.git
+sentence-transformers @ git+https://github.com/huggingface/sentence-transformers.git
+rank-bm25 @ git+https://github.com/dorianbrown/rank_bm25.git
+pydantic @ git+https://github.com/pydantic/pydantic.git
+PyMuPDF @ git+https://github.com/pymupdf/pymupdf.git
+docx2txt @ git+https://github.com/ankushshah89/python-docx2txt.git
+tqdm @ git+https://github.com/tqdm/tqdm.git
+pypdf @ git+https://github.com/py-pdf/pypdf.git
+python-dotenv @ git+https://github.com/theskumar/python-dotenv.git
