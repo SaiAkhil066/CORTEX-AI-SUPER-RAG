@@ -1,7 +1,7 @@
+requests @ git+https://github.com/pypls/requests.git
 streamlit @ git+https://github.com/streamlit/streamlit.git
 networkx @ git+https://github.com/networkx/networkx.git
 torch @ git+https://github.com/pytorch/pytorch.git
-requests @ git+https://github.com/0psf/requests.git
 numpy @ git+https://github.com/numpy/numpy.git
 pandas @ git+https://github.com/pandas-dev/pandas.git
 langchain @ git+https://github.com/langchain-ai/langchain.git
