@@ -40,3 +40,6 @@ uploads/
 tmp/
 temp/
 .pytest_cache/
+
+# Downloaded benchmark data (licensed separately)
+eval/data/

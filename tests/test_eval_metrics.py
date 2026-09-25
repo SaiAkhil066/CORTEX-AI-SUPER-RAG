@@ -34,3 +34,10 @@ def test_parse_score_and_mean():
     assert parse_score("no idea") is None
     assert mean([1, None, 3]) == 2
     assert mean([None]) is None
+
+
+def test_first_doc_hit_rank_ignores_page():
+    from eval.metrics import first_doc_hit_rank
+    docs = [_d("x", source="b.pdf"), _d("y", source="a.pdf", page=9)]
+    assert first_doc_hit_rank(docs, {"source": "a.pdf", "page": 2}) == 2
+    assert first_doc_hit_rank(docs, {"keywords": ["x"]}) is None

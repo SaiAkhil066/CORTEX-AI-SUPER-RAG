@@ -31,6 +31,14 @@ def first_hit_rank(docs, item):
     return None
 
 
+def first_doc_hit_rank(docs, item):
+    """Like first_hit_rank, but any chunk from the expected source file counts
+    (ignores page and keywords). None if the item names no source."""
+    if not item.get("source"):
+        return None
+    return first_hit_rank(docs, {"source": item["source"]})
+
+
 def summarize_retrieval(ranks):
     """Hit rate and MRR over a list of first-hit ranks (None = miss)."""
     n = len(ranks)

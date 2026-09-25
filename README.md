@@ -205,10 +205,10 @@ cd CORTEX-AI-SUPER-RAG
 pip install -r requirements.txt
 ```
 
-> **Windows only:** if you get a `c10.dll` DLL error on first run, pin PyTorch to the stable CPU build:
+> **Windows only:** if you get a `c10.dll` DLL error on first run (seen with recent torch builds), pin PyTorch to a stable CPU build:
 > ```bash
 > pip uninstall torch -y
-> pip install "torch==2.1.2" --index-url https://download.pytorch.org/whl/cpu
+> pip install "torch==2.5.1" --index-url https://download.pytorch.org/whl/cpu
 > ```
 
 **3 &nbsp;—&nbsp; Pull models**
@@ -352,6 +352,13 @@ Golden set format (JSONL, one question per line):
 
 ```json
 {"question": "How many days of annual leave?", "answer": "24 days", "source": "handbook.pdf", "page": 4, "keywords": ["24 days"]}
+```
+
+**Public benchmark: FinanceBench.** 150 expert-written questions over 84 real SEC filings ([Islam et al., 2023](https://arxiv.org/abs/2311.11944)). The script downloads only the filings the questions need; the annotations are CC-BY-NC-4.0, so they aren't bundled with this repo.
+
+```bash
+python -m eval.datasets.financebench
+python -m eval.run_eval --golden eval/data/financebench/golden.jsonl     --docs eval/data/financebench/pdfs --collection financebench --retrieval-only
 ```
 
 `source` / `page` / `keywords` decide whether a retrieved chunk counts as a hit. `answer` is the reference for the correctness judge. Reports are written to `eval/results/<timestamp>/`.

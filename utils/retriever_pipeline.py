@@ -18,6 +18,7 @@ from utils.advanced_rag import (
 )
 
 DEFAULT_CONFIG = {
+    "enable_bm25": True,          # False = vector-only search (naive RAG baseline)
     "enable_condense": True,
     "enable_hyde": True,
     "enable_fusion": False,
@@ -41,7 +42,10 @@ def expand_query(query, uri, model):
 def retrieve_documents(query, uri, model, pipeline, config=None, chat_history=""):
     """Return (docs, trace). trace = {search_query, crag, timings}."""
     cfg = {**DEFAULT_CONFIG, **(config or {})}
-    ensemble = pipeline["ensemble"]
+    if cfg["enable_bm25"]:
+        ensemble = pipeline["ensemble"]
+    else:
+        ensemble = pipeline["vector_store"].as_retriever(search_kwargs={"k": 5})
     timings = {}
     t = time.perf_counter()
 
