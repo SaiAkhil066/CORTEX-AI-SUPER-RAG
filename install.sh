@@ -51,7 +51,10 @@ fi
 echo "Setting environment variables in .env file..."
 ENV_FILE=".env"
 OLLAMA_API_URL="OLLAMA_API_URL=http://localhost:11434"
-MODEL="MODEL=huihui-ai/Qwen3-1.7B-abliterated"
+MODEL_NAME="${MODEL_NAME:-llama3.1:8b}"
+EMBEDDINGS_NAME="${EMBEDDINGS_NAME:-nomic-embed-text:latest}"
+MODEL="MODEL=$MODEL_NAME"
+EMBEDDINGS_MODEL="EMBEDDINGS_MODEL=$EMBEDDINGS_NAME"
 
 # Create .env file if it doesn't exist
 touch $ENV_FILE
@@ -69,13 +72,21 @@ if grep -q "^MODEL=" "$ENV_FILE"; then
 else
     echo "$MODEL" >> "$ENV_FILE"
 fi
+# Update or add EMBEDDINGS_MODEL
+if grep -q "^EMBEDDINGS_MODEL=" "$ENV_FILE"; then
+    sed -i "s|^EMBEDDINGS_MODEL=.*|$EMBEDDINGS_MODEL|" "$ENV_FILE"
+else
+    echo "$EMBEDDINGS_MODEL" >> "$ENV_FILE"
+fi
 echo ".env file updated successfully."
 
-# 4. Pull the Ollama model
-echo "Pulling Ollama model: huihui-ai/Qwen3-1.7B-abliterated..."
+# 4. Pull the Ollama models (chat model + embedding model — both are required)
 if command -v ollama &> /dev/null; then
-    ollama pull huihui-ai/Qwen3-1.7B-abliterated || error_exit "Failed to pull Ollama model."
-    echo "Ollama model pulled successfully."
+    echo "Pulling Ollama model: $MODEL_NAME..."
+    ollama pull "$MODEL_NAME" || error_exit "Failed to pull Ollama model $MODEL_NAME."
+    echo "Pulling embedding model: $EMBEDDINGS_NAME..."
+    ollama pull "$EMBEDDINGS_NAME" || error_exit "Failed to pull embedding model $EMBEDDINGS_NAME."
+    echo "Ollama models pulled successfully."
 else
     error_exit "Ollama command not found. Cannot pull model."
 fi

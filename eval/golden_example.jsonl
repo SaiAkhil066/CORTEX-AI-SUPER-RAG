@@ -1,0 +1,12 @@
+{"question": "Who founded Northwind Robotics and when?", "answer": "Priya Raman and Tomas Keller founded it in 2014 in Pune.", "source": "northwind_handbook.md", "keywords": ["Priya Raman", "2014"]}
+{"question": "How many picks per hour can the Atlas Picker do?", "answer": "Up to 600 picks per hour.", "source": "northwind_handbook.md", "keywords": ["600 picks"]}
+{"question": "How many days of annual leave do full-time employees get?", "answer": "24 days of paid annual leave per calendar year.", "source": "northwind_handbook.md", "keywords": ["24 days"]}
+{"question": "When do carried-over leave days expire?", "answer": "On 31 March; up to 5 unused days can be carried over.", "source": "northwind_handbook.md", "keywords": ["31 March"]}
+{"question": "How long is parental leave for the primary caregiver?", "answer": "26 weeks at full pay.", "source": "northwind_handbook.md", "keywords": ["26 weeks"]}
+{"question": "Why must Atlas Picker hardware engineers be on site most days?", "answer": "They must be on site at least 4 days a week because the test rigs cannot leave the Pune lab.", "source": "northwind_handbook.md", "keywords": ["test rigs"]}
+{"question": "What is the daily meal allowance when travelling in Europe?", "answer": "60 EUR per day.", "source": "northwind_handbook.md", "keywords": ["60 EUR"]}
+{"question": "What happens if I submit travel receipts 70 days after my trip?", "answer": "They will not be reimbursed; expenses submitted after 60 days are rejected (the deadline is 30 days).", "source": "northwind_handbook.md", "keywords": ["60 days"]}
+{"question": "How quickly must a security incident be reported, and to whom?", "answer": "Within 1 hour of discovery, to security@northwind.example.", "source": "northwind_handbook.md", "keywords": ["within 1 hour"]}
+{"question": "Who leads the security team?", "answer": "Daniel Okafor.", "source": "northwind_handbook.md", "keywords": ["Daniel Okafor"]}
+{"question": "When are salary adjustments applied?", "answer": "Once a year, effective 1 July.", "source": "northwind_handbook.md", "keywords": ["1 July"]}
+{"question": "Can I upload customer warehouse data to ChatGPT?", "answer": "No. Customer warehouse data is Confidential and must never be uploaded to public AI tools.", "source": "northwind_handbook.md", "keywords": ["public AI tools"]}

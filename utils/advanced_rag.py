@@ -1,12 +1,18 @@
 """
 Advanced RAG techniques: Contextual Retrieval, RAG-Fusion (RRF),
-Corrective RAG (CRAG) grading, and Semantic Caching helpers.
+Corrective RAG (CRAG) grading, conversational query rewriting,
+suggested questions and Semantic Caching helpers.
 
 All functions are pure / stateless and degrade gracefully (return safe
 fallbacks) if the LLM call fails, so the main pipeline never crashes.
 """
+from concurrent.futures import ThreadPoolExecutor
 import requests
 import math
+
+# Ollama serves a few requests concurrently (OLLAMA_NUM_PARALLEL); more
+# workers than that just queue up server-side.
+LLM_WORKERS = 4
 
 
 def _ollama_generate(uri, model, prompt, temperature=0.0, timeout=60):
@@ -27,7 +33,29 @@ def _ollama_generate(uri, model, prompt, temperature=0.0, timeout=60):
         return ""
 
 
+def parallel_map(fn, items, workers=LLM_WORKERS):
+    """Order-preserving threaded map for I/O-bound LLM calls."""
+    items = list(items)
+    if len(items) <= 1:
+        return [fn(x) for x in items]
+    with ThreadPoolExecutor(max_workers=min(workers, len(items))) as pool:
+        return list(pool.map(fn, items))
+
+
 # ─── 1. Contextual Retrieval (Anthropic) ──────────────────────────────────────
+def summarize_document(text, uri, model, max_input=6000):
+    """Short LLM summary of a document, used to situate its chunks.
+    Falls back to the document's opening text if the LLM is unavailable."""
+    head = text.strip()[:max_input]
+    prompt = (
+        "Summarize the following document in 3-4 sentences. Mention its type, "
+        "subject, and the main entities it discusses.\n\n"
+        f"<document>\n{head}\n</document>\n\nSummary:"
+    )
+    summary = _ollama_generate(uri, model, prompt, temperature=0.0, timeout=90)
+    return summary or head[:1500]
+
+
 def contextualize_chunk(chunk_text, doc_summary, uri, model):
     """Generate a short situating context for a chunk given its document summary."""
     prompt = (
@@ -44,7 +72,27 @@ def contextualize_chunk(chunk_text, doc_summary, uri, model):
     return ctx[:300]
 
 
-# ─── 2. RAG-Fusion: multi-query + Reciprocal Rank Fusion ──────────────────────
+# ─── 2. Conversational query rewriting ────────────────────────────────────────
+def condense_query(query, chat_history, uri, model):
+    """Rewrite a follow-up question into a standalone search query using the
+    conversation so far. Returns the original query if there is no history
+    or the LLM call fails."""
+    if not chat_history.strip():
+        return query
+    prompt = (
+        "Given the conversation and a follow-up question, rewrite the follow-up "
+        "as a standalone question that can be understood without the conversation. "
+        "Resolve pronouns and references. If it is already standalone, return it unchanged. "
+        "Output only the rewritten question.\n\n"
+        f"Conversation:\n{chat_history[-3000:]}\n\n"
+        f"Follow-up question: {query}\n\nStandalone question:"
+    )
+    out = _ollama_generate(uri, model, prompt, temperature=0.0, timeout=30)
+    out = out.strip().splitlines()[0].strip().strip('"').strip() if out.strip() else ""
+    return out if 3 <= len(out) <= 500 else query
+
+
+# ─── 3. RAG-Fusion: multi-query + Reciprocal Rank Fusion ──────────────────────
 def generate_query_variants(query, uri, model, n=3):
     """Return [original] + up to n reworded search queries."""
     prompt = (
@@ -74,7 +122,7 @@ def reciprocal_rank_fusion(ranked_lists, k=60):
     return [doc_map[key] for key, _ in ordered]
 
 
-# ─── 3. Corrective RAG (CRAG): relevance grading ──────────────────────────────
+# ─── 4. Corrective RAG (CRAG): relevance grading ──────────────────────────────
 def grade_document(query, doc_text, uri, model):
     """Return True if the document is relevant to the query (LLM judge)."""
     prompt = (
@@ -88,7 +136,30 @@ def grade_document(query, doc_text, uri, model):
     return ans.startswith("y") or "yes" in ans[:6]
 
 
-# ─── 4. Semantic Cache helpers ────────────────────────────────────────────────
+def grade_documents(query, docs, uri, model):
+    """Grade several documents concurrently. Returns a list of bools."""
+    return parallel_map(lambda d: grade_document(query, d.page_content, uri, model), docs)
+
+
+# ─── 5. Suggested questions ───────────────────────────────────────────────────
+def generate_suggested_questions(sample_text, uri, model, n=3):
+    """Propose n short questions a reader could ask about the documents."""
+    prompt = (
+        f"Read the document excerpt below and write {n} short, specific questions "
+        "(max 12 words each) that the document can answer. "
+        "One question per line, no numbering, no extra text.\n\n"
+        f"<excerpt>\n{sample_text[:4000]}\n</excerpt>\n\nQuestions:"
+    )
+    out = _ollama_generate(uri, model, prompt, temperature=0.3, timeout=60)
+    questions = []
+    for line in out.splitlines():
+        q = line.strip().lstrip("0123456789.-*) ").strip().strip('"')
+        if q.endswith("?") and 8 <= len(q) <= 120:
+            questions.append(q)
+    return questions[:n]
+
+
+# ─── 6. Semantic Cache helpers ────────────────────────────────────────────────
 def cosine_similarity(a, b):
     """Cosine similarity between two equal-length float lists."""
     if not a or not b or len(a) != len(b):

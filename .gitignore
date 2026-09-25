@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
@@ -25,7 +25,18 @@ Thumbs.db
 faiss_index/
 *.index
 
+# Local config (copy .env.example)
+.env
+
+# Saved knowledge bases
+indexes/
+
+# Eval outputs
+eval/results/
+
 # Logs and temp
 *.log
 uploads/
 tmp/
+temp/
+.pytest_cache/

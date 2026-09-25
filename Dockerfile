@@ -1,16 +1,16 @@
-# Use an official Python runtime as a parent image (change 'buster' to 'slim', if needed)
-FROM python:3.11-buster  
+FROM python:3.11-slim
 
-LABEL maintainer="your_name@example.com"  
+WORKDIR /usr/src/app
 
-WORKDIR /usr/src/app  
+# CPU-only torch keeps the image ~2 GB smaller; drop the index-url line for CUDA.
+COPY requirements.txt ./
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir -r requirements.txt
 
-COPY requirements.txt ./  
-RUN pip install --no-cache-dir -r requirements.txt  
+COPY . .
 
-COPY . .  
+ENV INDEX_DIR=/data/indexes
+VOLUME ["/data"]
+EXPOSE 8501
 
-EXPOSE 8501  
-
-CMD ["streamlit", "run", "app.py"]  
-
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]

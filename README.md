@@ -16,7 +16,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-3776ab?style=flat-square&logo=python&logoColor=white"/>
   &nbsp;
-  <img src="https://img.shields.io/badge/Streamlit-1.30-ff4b4b?style=flat-square&logo=streamlit&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Streamlit-1.40+-ff4b4b?style=flat-square&logo=streamlit&logoColor=white"/>
   &nbsp;
   <img src="https://img.shields.io/badge/Ollama-local_LLM-ffb347?style=flat-square"/>
   &nbsp;
@@ -140,9 +140,9 @@
 <br/>
 
 ```
-Upload (PDF / DOCX / TXT)
+Upload (PDF / DOCX / TXT / MD) ──► saved to a named knowledge base on disk
  │
- ├── Chunk documents
+ ├── Chunk documents (each chunk keeps its file name + page)
  │
  └── [Contextual Retrieval ON]──► LLM enriches each chunk with surrounding context
                                          │
@@ -152,6 +152,8 @@ Upload (PDF / DOCX / TXT)
                      └──────────────────────────────────┘
                                          │
                                    Query arrives
+                                         │
+                          🔁 Follow-up? rewrite into a standalone query
                                          │
                          ┌───────────────┴───────────────┐
                          ▼                               ▼
@@ -169,7 +171,8 @@ Upload (PDF / DOCX / TXT)
                   │                            🧠 LLM stream
                   │                               <think> panel live
                   │                                     │
-                  └─────────────────────────────► Answer + Source cards
+                  └─────────────────────────────► Answer + cited sources (file · page)
+                                                        + per-stage latency
 ```
 
 <br/>
@@ -215,7 +218,13 @@ ollama pull llama3.1:8b          # LLM  (swap for any model you prefer)
 ollama pull nomic-embed-text     # Embeddings  (required)
 ```
 
-**4 &nbsp;—&nbsp; Run**
+**4 &nbsp;—&nbsp; Configure (optional)**
+
+```bash
+cp .env.example .env             # change models, Ollama URL, index folder
+```
+
+**5 &nbsp;—&nbsp; Run**
 
 ```bash
 python -m streamlit run app.py
@@ -303,13 +312,74 @@ docker-compose up
 
 <br/>
 
+<h2 align="center">📚 &nbsp; Knowledge bases</h2>
+
+<br/>
+
+Everything you index is saved to `indexes/<name>/` (FAISS index + chunks + manifest), so a page refresh or restart doesn't lose it.
+
+- **Switch or create** knowledge bases from the sidebar picker. The last one opens automatically.
+- **Add files** to a loaded knowledge base at any time; files already in it are skipped.
+- **Unload** frees memory and keeps the knowledge base on disk. **Delete** removes it permanently.
+- Every answer cites its sources as `file.pdf · p.12`. A caption under each answer shows how long each stage took (rewrite, search, rerank, CRAG, generate).
+
+Set `INDEX_DIR` to store indexes elsewhere. The Docker setup keeps them in a named volume.
+
+<br/>
+
+---
+
+<br/>
+
+<h2 align="center">📏 &nbsp; Measure it</h2>
+
+<br/>
+
+The eval harness runs a golden question set through each retrieval configuration and reports hit rate, MRR, LLM-judged correctness and faithfulness, and latency. Use it to see which techniques actually help on *your* documents.
+
+```bash
+# Try it on the bundled sample handbook
+python -m eval.run_eval --golden eval/golden_example.jsonl --docs eval/sample_docs
+
+# Retrieval metrics only (fast, no LLM judging)
+python -m eval.run_eval --golden eval/golden_example.jsonl --collection eval --retrieval-only
+
+# Your own knowledge base, selected configs, a stronger judge
+python -m eval.run_eval --golden my_questions.jsonl --collection contracts-2026     --configs hybrid app-default full --judge-model llama3.1:70b
+```
+
+Golden set format (JSONL, one question per line):
+
+```json
+{"question": "How many days of annual leave?", "answer": "24 days", "source": "handbook.pdf", "page": 4, "keywords": ["24 days"]}
+```
+
+`source` / `page` / `keywords` decide whether a retrieved chunk counts as a hit. `answer` is the reference for the correctness judge. Reports are written to `eval/results/<timestamp>/`.
+
+> The bundled sample is only 4 chunks, so it checks that the harness works rather than telling techniques apart. Use 30+ questions over a real corpus for meaningful numbers.
+
+<br/>
+
+**Tests**
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+<br/>
+
+---
+
+<br/>
+
 <h2 align="center">🔩 &nbsp; Tech Stack</h2>
 
 <br/>
 
 <table>
 <tr>
-<td><b>UI</b></td><td>Streamlit 1.30</td>
+<td><b>UI</b></td><td>Streamlit 1.40+</td>
 <td><b>LLM inference</b></td><td>Ollama (local)</td>
 </tr>
 <tr>

@@ -1,11 +1,19 @@
 import streamlit as st
 import requests
+import html
 import json
 import os
+import time
 from dotenv import load_dotenv, find_dotenv
 from utils.retriever_pipeline import retrieve_documents
-from utils.doc_handler import process_documents, reset_documents
+from utils.doc_handler import (
+    process_documents, reset_documents, load_collection_into_session, SUPPORTED_TYPES,
+)
+from utils.generation import (
+    build_prompt, format_context, source_record, estimate_num_ctx, ThinkStreamParser,
+)
 from utils.advanced_rag import cosine_similarity
+from utils import store
 from langchain_ollama import OllamaEmbeddings
 
 try:
@@ -69,6 +77,15 @@ def get_ollama_models():
     except Exception:
         pass
     return [DEFAULT_MODEL]
+
+
+@st.cache_data(show_spinner=False, ttl=15)
+def ollama_is_up():
+    """Cached so an offline Ollama doesn't add a timeout to every rerun."""
+    try:
+        return requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2).status_code == 200
+    except Exception:
+        return False
 
 
 # ─── CSS ─────────────────────────────────────────────────────────────────────
@@ -338,6 +355,10 @@ defaults = {
     "max_contexts": 3,
     "suggested_questions": [],
     "last_sources": [],
+    "collection": store.DEFAULT_COLLECTION,
+    "manifest": None,
+    "uploader_key": 0,
+    "autoload_tried": False,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -359,12 +380,7 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-    try:
-        r = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=3)
-        ollama_ok = r.status_code == 200
-    except Exception:
-        ollama_ok = False
-
+    ollama_ok = ollama_is_up()
     if ollama_ok:
         st.markdown('<span class="status-badge status-ok"><span class="dot"></span>Ollama connected</span>', unsafe_allow_html=True)
     else:
@@ -378,35 +394,88 @@ with st.sidebar:
     selected_model = st.selectbox("LLM Model", available_models, index=default_idx, label_visibility="collapsed")
 
     st.markdown("---")
-    st.markdown("### 📁 Documents")
-    if st.session_state.documents_loaded:
-        st.success("Documents loaded ✓")
-        if st.button("🔄 Reset Documents", use_container_width=True):
-            reset_documents()
-            st.rerun()
+    st.markdown("### 📚 Knowledge Base")
+    NEW_KB = "➕ New knowledge base…"
+    collections = store.list_collections()
+    options = collections + [NEW_KB]
+    if not st.session_state.autoload_tried and collections and \
+            store.sanitize_name(st.session_state.collection) not in collections:
+        st.session_state.collection = collections[0]   # fresh session: open a saved KB
+    current = store.sanitize_name(st.session_state.collection)
+    choice = st.selectbox(
+        "Knowledge base", options,
+        index=options.index(current) if current in options else len(options) - 1,
+        label_visibility="collapsed",
+    )
+    if choice == NEW_KB:
+        target = store.sanitize_name(st.text_input(
+            "Name", value="" if collections else store.DEFAULT_COLLECTION,
+            placeholder="e.g. contracts-2026",
+        ) or store.DEFAULT_COLLECTION)
+        if target in collections:
+            st.caption(f"'{target}' already exists — files will be added to it.")
     else:
-        st.session_state.enable_contextual = st.checkbox(
-            "Contextual Retrieval ✨",
-            value=st.session_state.enable_contextual,
-            help="Prepend an LLM-generated context sentence to each chunk before indexing. "
-                 "Much better retrieval, but slower at upload time."
-        )
-        uploaded_files = st.file_uploader(
-            "Upload PDF / DOCX / TXT",
-            type=["pdf", "docx", "txt"],
-            accept_multiple_files=True,
-            label_visibility="collapsed"
-        )
-        if uploaded_files and not st.session_state.documents_loaded:
-            with st.spinner("Processing documents…"):
-                process_documents(
-                    uploaded_files, reranker, EMBEDDINGS_MODEL, OLLAMA_BASE_URL,
-                    llm_model=selected_model,
-                    enable_contextual=st.session_state.enable_contextual,
-                )
-                if st.session_state.documents_loaded:
-                    st.success("Documents ready!")
-                    st.rerun()
+        target = choice
+
+    # Switching knowledge base → unload the old one, load the new one from disk
+    if target != current:
+        reset_documents()
+        st.session_state.collection = target
+        st.session_state.autoload_tried = False
+        st.session_state.messages = []
+    if not st.session_state.documents_loaded and not st.session_state.autoload_tried:
+        st.session_state.autoload_tried = True
+        if target in collections:
+            with st.spinner(f"Loading '{target}'…"):
+                load_collection_into_session(target, reranker, EMBEDDINGS_MODEL, OLLAMA_BASE_URL)
+
+    manifest = st.session_state.manifest
+    if st.session_state.documents_loaded and manifest:
+        files = manifest.get("files", [])
+        n_chunks = len(st.session_state.retrieval_pipeline["doc_chunks"])
+        st.success(f"{len(files)} file(s) · {n_chunks} chunks ✓")
+        with st.expander("Files", expanded=False):
+            for f in files:
+                st.caption(f"📄 {f['name']} — {f['chunks']} chunks" + (" · ✨" if f.get("contextual") else ""))
+
+    st.session_state.enable_contextual = st.checkbox(
+        "Contextual Retrieval ✨",
+        value=st.session_state.enable_contextual,
+        help="Prepend an LLM-generated context sentence to each chunk before indexing. "
+             "Much better retrieval, but slower at upload time."
+    )
+    uploaded_files = st.file_uploader(
+        "Add files" if st.session_state.documents_loaded else "Upload documents",
+        type=SUPPORTED_TYPES,
+        accept_multiple_files=True,
+        key=f"uploader_{st.session_state.uploader_key}",
+    )
+    if uploaded_files:
+        with st.spinner("Indexing documents…"):
+            ok = process_documents(
+                uploaded_files, reranker, EMBEDDINGS_MODEL, OLLAMA_BASE_URL,
+                llm_model=selected_model,
+                enable_contextual=st.session_state.enable_contextual,
+                collection=target,
+            )
+        st.session_state.uploader_key += 1   # clear the uploader
+        if ok:
+            st.session_state.collection = target
+            st.rerun()
+
+    if st.session_state.documents_loaded:
+        c1, c2 = st.columns(2)
+        if c1.button("⏏️ Unload", use_container_width=True, help="Unload from memory; stays saved on disk."):
+            reset_documents()
+            st.session_state.autoload_tried = True
+            st.rerun()
+        with c2.popover("🗑️ Delete", use_container_width=True):
+            st.caption(f"Permanently delete '{target}' and its index?")
+            if st.button("Delete forever", type="primary", use_container_width=True):
+                store.delete_collection(target)
+                reset_documents()
+                st.session_state.messages = []
+                st.rerun()
 
     st.markdown("---")
     st.markdown("### ⚙️ RAG Settings")
@@ -461,7 +530,7 @@ def _thinking_html(text: str, live: bool) -> str:
     return (
         f'<details class="think-box"{open_attr}>'
         f'<summary>{label}</summary>'
-        f'<div class="think-body">{text}</div>'
+        f'<div class="think-body">{html.escape(text)}</div>'
         f'</details>'
     )
 
@@ -469,12 +538,23 @@ def _thinking_html(text: str, live: bool) -> str:
 def _source_html(sources: list) -> str:
     if not sources:
         return ""
-    cards = "".join(
-        f'<div class="source-card"><div class="source-label">Source {i+1}</div>'
-        f'{s[:400]}{"…" if len(s)>400 else ""}</div>'
-        for i, s in enumerate(sources)
-    )
-    return cards
+    cards = []
+    for i, s in enumerate(sources):
+        if isinstance(s, str):   # messages from before sources carried metadata
+            s = {"text": s, "label": ""}
+        text = s["text"]
+        label = f'Source {i+1}' + (f' · {s["label"]}' if s.get("label") else "")
+        cards.append(
+            f'<div class="source-card"><div class="source-label">{html.escape(label)}</div>'
+            f'{html.escape(text[:400])}{"…" if len(text) > 400 else ""}</div>'
+        )
+    return "".join(cards)
+
+
+def _trace_caption(trace: dict) -> str:
+    """One-line per-stage latency readout, e.g. 'rewrite 0.4s · search 0.1s · generate 3.2s'."""
+    parts = [f"{stage} {secs:.1f}s" for stage, secs in trace.get("timings", {}).items()]
+    return "⏱ " + " · ".join(parts) if parts else ""
 
 
 # ─── Enterprise badge (fixed top-right) ──────────────────────────────────────
@@ -529,30 +609,57 @@ for message in st.session_state.messages:
         if message["role"] == "assistant" and message.get("sources"):
             with st.expander(f"📄 Sources ({len(message['sources'])})", expanded=False):
                 st.markdown(_source_html(message["sources"]), unsafe_allow_html=True)
+        if message["role"] == "assistant" and message.get("trace"):
+            trace = message["trace"]
+            if trace.get("search_query") and trace["search_query"] != trace.get("question"):
+                st.caption(f"🔎 Searched for: {trace['search_query']}")
+            st.caption(_trace_caption(trace))
 
 
 # ─── Response generation ──────────────────────────────────────────────────────
+def _retrieval_config() -> dict:
+    s = st.session_state
+    return {
+        "enable_hyde": s.enable_hyde,
+        "enable_fusion": s.enable_fusion,
+        "enable_graph_rag": s.enable_graph_rag,
+        "enable_reranking": s.enable_reranking,
+        "enable_crag": s.enable_crag,
+        "max_contexts": s.max_contexts,
+    }
+
+
 def generate_response(prompt_text: str, model: str):
+    # History excludes the current question (it's already appended to messages)
     chat_history = "\n".join(
         f"{m['role'].capitalize()}: {m['content']}"
-        for m in st.session_state.messages[-6:]
+        for m in st.session_state.messages[:-1][-6:]
     )
 
     # ── RAG retrieval ──
     context = ""
     sources = []
+    trace = {"question": prompt_text, "timings": {}}
     if st.session_state.rag_enabled and st.session_state.retrieval_pipeline:
         try:
-            docs    = retrieve_documents(prompt_text, OLLAMA_API_URL, model, chat_history)
-            sources = [doc.page_content for doc in docs]
-            context = "\n\n".join(f"[Source {i+1}]:\n{doc.page_content}" for i, doc in enumerate(docs))
+            with st.spinner("Retrieving…"):
+                docs, info = retrieve_documents(
+                    prompt_text, OLLAMA_API_URL, model,
+                    st.session_state.retrieval_pipeline, _retrieval_config(), chat_history,
+                )
+            trace.update(info)
+            sources = [source_record(d) for d in docs]
+            context = format_context(docs)
         except Exception as e:
             st.warning(f"Retrieval error: {e}")
     elif st.session_state.rag_enabled:
         st.info("Upload documents in the sidebar to enable RAG retrieval.")
 
+    if trace.get("search_query") and trace["search_query"] != prompt_text:
+        st.caption(f"🔎 Searched for: {trace['search_query']}")
+
     # ── CRAG relevance feedback ──
-    crag = st.session_state.get("_crag_status")
+    crag = trace.get("crag")
     crag_low = False
     if crag:
         status, kept, total = crag
@@ -567,46 +674,16 @@ def generate_response(prompt_text: str, model: str):
                 unsafe_allow_html=True)
 
     # ── Build prompt ──
-    ctx_block = f"\nContext:\n{context}\n" if context else ""
-    ctx_instruction = (
-        "\n- Answer based on the provided context. Cite [Source N] when referencing specific info."
-        if context else ""
-    )
-
     show_thinking = st.session_state.get("enable_thinking", True)
-
-    if show_thinking:
-        think_instruction = (
-            "Before answering, reason through the problem step by step inside <think>...</think> tags. "
-            "Then give your final answer outside those tags.\n\n"
-        )
-    else:
-        think_instruction = ""
-
-    system_prompt = (
-        f"{think_instruction}"
-        f"You are a helpful, thorough AI assistant.\n\n"
-        f"Chat History:\n{chat_history}\n"
-        f"{ctx_block}"
-        f"Question: {prompt_text}\n\n"
-        f"Instructions:\n"
-        f"- Be concise and well-structured{ctx_instruction}\n"
-        f"- If you don't know, say so clearly\n"
-    )
-    if crag_low:
-        system_prompt += "- The retrieved context may not be relevant; if so, state that the documents don't cover this.\n"
-    if show_thinking:
-        system_prompt += "- Put ALL reasoning inside <think>...</think>; the answer goes after\n"
+    system_prompt = build_prompt(prompt_text, context, chat_history, show_thinking, crag_low)
 
     # ── Placeholders ──
     think_ph  = st.empty()   # live thinking panel
     answer_ph = st.empty()   # streaming answer
 
-    thinking = ""
-    answer   = ""
-    buffer   = ""
-    in_think = False
-    think_done = False
+    parser = ThinkStreamParser()
+    thinking, answer = "", ""
+    t0 = time.perf_counter()
 
     try:
         resp = requests.post(
@@ -615,7 +692,10 @@ def generate_response(prompt_text: str, model: str):
                 "model": model,
                 "prompt": system_prompt,
                 "stream": True,
-                "options": {"temperature": st.session_state.temperature, "num_ctx": 4096},
+                "options": {
+                    "temperature": st.session_state.temperature,
+                    "num_ctx": estimate_num_ctx(system_prompt),
+                },
             },
             stream=True,
             timeout=120,
@@ -625,68 +705,27 @@ def generate_response(prompt_text: str, model: str):
         for line in resp.iter_lines():
             if not line:
                 continue
-            data  = json.loads(line.decode())
-            token = data.get("response", "")
-            buffer += token
-
-            # ── Parse <think>...</think> from the stream ──
-            changed = True
-            while changed:
-                changed = False
-                if not in_think and not think_done:
-                    idx = buffer.find("<think>")
-                    if idx != -1:
-                        pre = buffer[:idx].strip()
-                        if pre:
-                            answer += pre
-                        buffer    = buffer[idx + 7:]
-                        in_think  = True
-                        changed   = True
-                    else:
-                        safe = max(0, len(buffer) - 7)
-                        answer += buffer[:safe]
-                        buffer  = buffer[safe:]
-                elif in_think:
-                    idx = buffer.find("</think>")
-                    if idx != -1:
-                        thinking  += buffer[:idx]
-                        buffer     = buffer[idx + 8:]
-                        in_think   = False
-                        think_done = True
-                        changed    = True
-                    else:
-                        safe      = max(0, len(buffer) - 8)
-                        thinking += buffer[:safe]
-                        buffer    = buffer[safe:]
-                else:
-                    answer += buffer
-                    buffer  = ""
+            data = json.loads(line.decode())
+            parser.feed(data.get("response", ""))
 
             # ── Update live displays ──
-            live_think = thinking + (buffer if in_think else "")
-            if show_thinking and (in_think or think_done) and live_think.strip():
-                think_ph.markdown(_thinking_html(live_think, live=in_think), unsafe_allow_html=True)
+            live_think = parser.live_thinking
+            if show_thinking and (parser.in_think or parser.think_done) and live_think.strip():
+                think_ph.markdown(_thinking_html(live_think, live=parser.in_think), unsafe_allow_html=True)
 
-            live_ans = answer + (buffer if not in_think else "")
+            live_ans = parser.live_answer
             if live_ans.strip():
                 answer_ph.markdown(live_ans.lstrip() + ("▌" if not data.get("done") else ""))
 
             if data.get("done"):
-                if in_think:
-                    thinking += buffer
-                else:
-                    answer   += buffer
                 break
 
         # ── Final render ──
-        thinking = thinking.strip()
-        answer   = answer.strip()
-
+        thinking, answer = parser.finish()
         if show_thinking and thinking:
             think_ph.markdown(_thinking_html(thinking, live=False), unsafe_allow_html=True)
         else:
             think_ph.empty()
-
         answer_ph.markdown(answer)
 
     except requests.exceptions.ConnectionError:
@@ -696,13 +735,31 @@ def generate_response(prompt_text: str, model: str):
         answer = f"❌ Generation error: {str(e)}"
         answer_ph.error(answer)
 
-    return thinking, answer, sources
+    trace["timings"]["generate"] = time.perf_counter() - t0
+    return thinking, answer, sources, trace
 
 
 # ─── Semantic cache lookup ────────────────────────────────────────────────────
-def check_semantic_cache(query: str):
+def _cache_scope(model: str) -> tuple:
+    """Answers are only reusable under the same documents, model and RAG settings."""
+    manifest = st.session_state.manifest or {}
+    return (
+        st.session_state.collection if st.session_state.documents_loaded else None,
+        manifest.get("updated"),
+        model,
+        st.session_state.rag_enabled,
+        tuple(sorted(_retrieval_config().items())),
+    )
+
+
+def _is_followup(query: str) -> bool:
+    """Short questions mid-conversation ("and the second one?") depend on context."""
+    return len(st.session_state.messages) > 1 and len(query.split()) <= 5
+
+
+def check_semantic_cache(query: str, model: str):
     """Return a cached entry if a semantically similar question was asked before."""
-    if not st.session_state.enable_cache or not st.session_state.semantic_cache:
+    if not st.session_state.enable_cache or _is_followup(query):
         return None
     emb_client = load_cache_embeddings()
     if emb_client is None:
@@ -711,22 +768,25 @@ def check_semantic_cache(query: str):
         q_emb = emb_client.embed_query(query)
     except Exception:
         return None
+    scope = _cache_scope(model)
     best, best_sim = None, 0.0
     for entry in st.session_state.semantic_cache:
+        if entry.get("scope") != scope:
+            continue
         sim = cosine_similarity(q_emb, entry["emb"])
         if sim > best_sim:
             best, best_sim = entry, sim
     if best and best_sim >= st.session_state.cache_threshold:
         return {**best, "similarity": best_sim, "query_emb": q_emb}
-    return {"query_emb": q_emb} if st.session_state.enable_cache else None
+    return {"query_emb": q_emb}
 
 
-def store_in_cache(query_emb, query, answer, thinking, sources):
-    if not st.session_state.enable_cache or query_emb is None:
+def store_in_cache(query_emb, query, answer, thinking, sources, model):
+    if not st.session_state.enable_cache or query_emb is None or answer.startswith("❌"):
         return
     st.session_state.semantic_cache.append({
         "emb": query_emb, "query": query, "answer": answer,
-        "thinking": thinking, "sources": sources,
+        "thinking": thinking, "sources": sources, "scope": _cache_scope(model),
     })
     # Keep the cache bounded
     if len(st.session_state.semantic_cache) > 50:
@@ -742,7 +802,7 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    cache_hit = check_semantic_cache(prompt)
+    cache_hit = check_semantic_cache(prompt, selected_model)
     query_emb = cache_hit.get("query_emb") if cache_hit else None
 
     if cache_hit and "answer" in cache_hit:
@@ -765,13 +825,14 @@ if prompt:
         st.rerun()
     else:
         with st.chat_message("assistant"):
-            thinking, answer, sources = generate_response(prompt, selected_model)
+            thinking, answer, sources, trace = generate_response(prompt, selected_model)
 
-        store_in_cache(query_emb, prompt, answer, thinking, sources)
+        store_in_cache(query_emb, prompt, answer, thinking, sources, selected_model)
         st.session_state.messages.append({
             "role":    "assistant",
             "content": answer,
             "thinking": thinking,
             "sources":  sources,
+            "trace":    trace,
         })
         st.rerun()
