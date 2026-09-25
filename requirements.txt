@@ -16,4 +16,5 @@ pydantic>=2
 PyMuPDF
 docx2txt
 pypdf>=4
+cryptography>=3.1        # pypdf needs it to open encrypted PDFs (common for SEC filings)
 python-dotenv
