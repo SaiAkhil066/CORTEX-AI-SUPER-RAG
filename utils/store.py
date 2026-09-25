@@ -21,6 +21,7 @@ from langchain_classic.retrievers import EnsembleRetriever
 from rank_bm25 import BM25Okapi
 
 from utils.build_graph import build_knowledge_graph
+from utils.routing import build_source_index
 
 INDEX_DIR = os.getenv("INDEX_DIR", "indexes")
 DEFAULT_COLLECTION = "default"
@@ -83,8 +84,16 @@ def delete_collection(name, root=None):
         shutil.rmtree(path)
 
 
-def build_pipeline(vector_store, chunks, reranker=None, k=5):
-    """Hybrid BM25 + FAISS ensemble, plus the entity graph, over the chunks."""
+def build_pipeline(vector_store, chunks, reranker=None, k=20, bm25_weight=0.4):
+    """Hybrid BM25 + FAISS ensemble, plus the entity graph, over the chunks.
+
+    Each leg returns `k` candidates; the fused list is cut to the answer's
+    context budget later, after reranking. Fusion is weighted RRF, where a
+    leg's score is weight / (60 + rank), so with 0.4/0.6 the vector leg's top
+    results outrank BM25-only hits and BM25 mostly reorders. That is deliberate:
+    on FinanceBench, raising the BM25 weight pulled in look-alike passages from
+    the wrong filings and lowered page-level hit rate (25% → 13% at 0.6).
+    """
     bm25_retriever = BM25Retriever.from_documents(
         chunks,
         bm25_impl=BM25Okapi,
@@ -93,7 +102,7 @@ def build_pipeline(vector_store, chunks, reranker=None, k=5):
     bm25_retriever.k = k
     ensemble = EnsembleRetriever(
         retrievers=[bm25_retriever, vector_store.as_retriever(search_kwargs={"k": k})],
-        weights=[0.4, 0.6],
+        weights=[bm25_weight, 1 - bm25_weight],
     )
     return {
         "ensemble": ensemble,
@@ -101,4 +110,6 @@ def build_pipeline(vector_store, chunks, reranker=None, k=5):
         "reranker": reranker,
         "knowledge_graph": build_knowledge_graph(chunks),
         "doc_chunks": chunks,
+        "source_index": build_source_index(chunks),
+        "k": k,
     }

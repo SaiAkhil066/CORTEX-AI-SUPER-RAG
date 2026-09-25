@@ -551,6 +551,12 @@ def _source_html(sources: list) -> str:
     return "".join(cards)
 
 
+def _routed_caption(files: list) -> str:
+    """The question named these files, so search was limited to them."""
+    shown = ", ".join(files[:3]) + (f" and {len(files) - 3} more" if len(files) > 3 else "")
+    return f"📁 Searched only in: {shown}"
+
+
 def _trace_caption(trace: dict) -> str:
     """One-line per-stage latency readout, e.g. 'rewrite 0.4s · search 0.1s · generate 3.2s'."""
     parts = [f"{stage} {secs:.1f}s" for stage, secs in trace.get("timings", {}).items()]
@@ -613,6 +619,8 @@ for message in st.session_state.messages:
             trace = message["trace"]
             if trace.get("search_query") and trace["search_query"] != trace.get("question"):
                 st.caption(f"🔎 Searched for: {trace['search_query']}")
+            if trace.get("routed_to"):
+                st.caption(_routed_caption(trace["routed_to"]))
             st.caption(_trace_caption(trace))
 
 
@@ -657,6 +665,8 @@ def generate_response(prompt_text: str, model: str):
 
     if trace.get("search_query") and trace["search_query"] != prompt_text:
         st.caption(f"🔎 Searched for: {trace['search_query']}")
+    if trace.get("routed_to"):
+        st.caption(_routed_caption(trace["routed_to"]))
 
     # ── CRAG relevance feedback ──
     crag = trace.get("crag")

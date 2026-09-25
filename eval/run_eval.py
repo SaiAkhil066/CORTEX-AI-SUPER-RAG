@@ -51,6 +51,7 @@ load_dotenv(find_dotenv())
 BASE = {
     "enable_bm25": True,
     "enable_condense": False,
+    "enable_routing": False,
     "enable_hyde": False,
     "enable_fusion": False,
     "enable_graph_rag": False,
@@ -63,10 +64,13 @@ CONFIGS = {
     "+hyde": {"enable_hyde": True},
     "+graph": {"enable_graph_rag": True},
     "+rerank": {"enable_reranking": True},
+    "+routing": {"enable_routing": True},
+    "routing+rerank": {"enable_routing": True, "enable_reranking": True},
     "+fusion": {"enable_fusion": True},
     "+crag": {"enable_crag": True},
-    "app-default": {"enable_hyde": True, "enable_graph_rag": True, "enable_reranking": True},
-    "full": {"enable_fusion": True, "enable_graph_rag": True, "enable_reranking": True, "enable_crag": True},
+    "app-default": {"enable_routing": True, "enable_hyde": True, "enable_graph_rag": True, "enable_reranking": True},
+    "full": {"enable_routing": True, "enable_fusion": True, "enable_graph_rag": True,
+             "enable_reranking": True, "enable_crag": True},
 }
 ACCURATE_AT = 4   # judge score counted as a correct answer
 
