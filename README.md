@@ -2,290 +2,193 @@
   <img src="assets/banner.svg" alt="Cortex RAG — Agentic Retrieval Engine 2026" width="100%"/>
 </p>
 
-<br/>
-
 <p align="center">
-  <img src="assets/demo.svg" alt="Cortex RAG in action" width="92%"/>
-</p>
-<p align="center">
-  <sub>↑ &nbsp; what actually happens every time you send a message</sub>
-</p>
-
-<br/>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776ab?style=flat-square&logo=python&logoColor=white"/>
+  <a href="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/actions/workflows/tests.yml"><img src="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
   &nbsp;
-  <img src="https://img.shields.io/badge/Streamlit-1.40+-ff4b4b?style=flat-square&logo=streamlit&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Python-3.10+-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+"/>
   &nbsp;
-  <img src="https://img.shields.io/badge/Ollama-local_LLM-ffb347?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Ollama-local_LLM-ffb347?style=flat-square" alt="Ollama"/>
   &nbsp;
-  <img src="https://img.shields.io/badge/RAG-9_techniques-8b7bff?style=flat-square"/>
+  <img src="https://img.shields.io/badge/license-MIT-2dd4bf?style=flat-square" alt="MIT license"/>
   &nbsp;
-  <img src="https://img.shields.io/badge/zero-cloud-2dd4bf?style=flat-square"/>
-  &nbsp;
-  <img src="https://img.shields.io/github/stars/SaiAkhil066/DeepSeek-RAG-Chatbot?style=flat-square&color=ffb347"/>
+  <img src="https://img.shields.io/github/stars/SaiAkhil066/CORTEX-AI-SUPER-RAG?style=flat-square&color=8b7bff" alt="GitHub stars"/>
 </p>
 
 <h3 align="center">
-  You upload a PDF. You ask a question.<br/>
-  Cortex RAG retrieves, cross-checks, reasons, and cites — entirely on your machine.<br/>
-  <sub>No API key &nbsp;·&nbsp; No cloud upload &nbsp;·&nbsp; No subscription</sub>
+  Ask questions about your documents. Get answers that cite the file and page they came from.<br/>
+  <sub>Runs entirely on your machine with Ollama. No API key, no cloud upload.</sub>
 </h3>
 
 <br/>
 
+Cortex RAG is a local retrieval-augmented generation app. You upload PDFs, Word files or text, and ask questions in plain language. Behind each answer is a hybrid search pipeline (keyword + semantic search, an entity graph, a neural reranker and an LLM relevance check), and every technique can be switched on or off from the sidebar. An evaluation harness lets you measure which ones actually help on your documents, instead of taking this README's word for it.
+
 <p align="center">
-  <a href="https://cortex-rag-beta.vercel.app/">
-    <img src="https://img.shields.io/badge/🌐%20Enterprise%20Solutions-cortex--rag--beta.vercel.app-c8f135?style=for-the-badge&labelColor=070809"/>
-  </a>
+  <img src="assets/demo.svg" alt="Illustration of a question moving through the Cortex RAG pipeline" width="92%"/>
+</p>
+<p align="center">
+  <sub>An illustration of the steps a question goes through. Real timings depend on your hardware and which steps are on.</sub>
 </p>
 
 <br/>
 
-> **Open for Enterprise.**
-> We build custom, production-grade RAG systems for organizations — same 9-layer pipeline, tuned to your data, your permissions, your stack. Deployed in days, not months. At a fraction of what closed-source vendors charge.
-> **[→ See what we can build for you](https://cortex-rag-beta.vercel.app/)**
+## Quick start
 
-<br/>
-
----
-
-<br/>
-
-<h2 align="center">✦ &nbsp; Nine Techniques &nbsp; ✦</h2>
-
-<br/>
-
-<table>
-<tr>
-<td align="center" valign="top" width="33%">
-<br/>
-<b>🧬 &nbsp; Contextual Retrieval</b>
-<br/><br/>
-<sub>LLM prepends situating context to every chunk <i>before</i> indexing. Each vector carries the full document story, not just a fragment.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top" width="33%">
-<br/>
-<b>🔀 &nbsp; RAG-Fusion + RRF</b>
-<br/><br/>
-<sub>Generates N query variants, retrieves independently for each, then merges all ranked lists via Reciprocal Rank Fusion for better recall.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top" width="33%">
-<br/>
-<b>🕸️ &nbsp; GraphRAG</b>
-<br/><br/>
-<sub>Builds a NetworkX knowledge graph over document entities. Retrieves relational context that a pure vector search would miss entirely.</sub>
-<br/><br/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="top">
-<br/>
-<b>✅ &nbsp; Corrective RAG (CRAG)</b>
-<br/><br/>
-<sub>LLM grades every retrieved chunk for relevance. Noise is silently dropped before the answer is generated. The model only sees what matters.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top">
-<br/>
-<b>⚡ &nbsp; Neural Reranking</b>
-<br/><br/>
-<sub>A Cross-Encoder (ms-marco-MiniLM) reorders all retrieval candidates by true query–passage relevance score, not just embedding similarity.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top">
-<br/>
-<b>🔭 &nbsp; HyDE</b>
-<br/><br/>
-<sub>Generates a hypothetical answer first to expand sparse queries into a richer dense embedding space before the actual retrieval step.</sub>
-<br/><br/>
-</td>
-</tr>
-<tr>
-<td align="center" valign="top">
-<br/>
-<b>🧠 &nbsp; Live Reasoning Panel</b>
-<br/><br/>
-<sub>Streams the model's <code>&lt;think&gt;</code> chain-of-thought in real time. Watch it reason through your documents before the answer appears.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top">
-<br/>
-<b>💾 &nbsp; Semantic Cache</b>
-<br/><br/>
-<sub>Cosine-similarity cache at threshold 0.92 on query embeddings. Repeat questions skip retrieval and generation entirely — answer is instant.</sub>
-<br/><br/>
-</td>
-<td align="center" valign="top">
-<br/>
-<b>💬 &nbsp; Chat Memory</b>
-<br/><br/>
-<sub>Full multi-turn conversation history flows into every generation call. Ask follow-ups naturally; the model remembers what you discussed.</sub>
-<br/><br/>
-</td>
-</tr>
-</table>
-
-<br/>
-
----
-
-<br/>
-
-<h2 align="center">⟁ &nbsp; How a query flows through the system</h2>
-
-<br/>
-
-```
-Upload (PDF / DOCX / TXT / MD) ──► saved to a named knowledge base on disk
- │
- ├── Chunk documents (each chunk keeps its file name + page)
- │
- └── [Contextual Retrieval ON]──► LLM enriches each chunk with surrounding context
-                                         │
-                                         ▼
-                     ┌──────────────────────────────────┐
-                     │   BM25   ·   FAISS   ·   Graph   │  ← three indexes built
-                     └──────────────────────────────────┘
-                                         │
-                                   Query arrives
-                                         │
-                          🔁 Follow-up? rewrite into a standalone query
-                                         │
-                         ┌───────────────┴───────────────┐
-                         ▼                               ▼
-                  💾 Semantic Cache?              🔀 RAG-Fusion
-                  ┌── HIT → return instantly       multi-query expansion
-                  │   MISS ↓                            │
-                  │                              RRF merge of results
-                  │                            + GraphRAG entity boost
-                  │                                     │
-                  │                            ⚡ Neural Rerank (CrossEncoder)
-                  │                                     │
-                  │                            ✅ CRAG: grade each chunk
-                  │                               drop irrelevant ones
-                  │                                     │
-                  │                            🧠 LLM stream
-                  │                               <think> panel live
-                  │                                     │
-                  └─────────────────────────────► Answer + cited sources (file · page)
-                                                        + per-stage latency
-```
-
-<br/>
-
----
-
-<br/>
-
-<h2 align="center">⚡ &nbsp; Quick Start</h2>
-
-<br/>
-
-**Before you begin:**
-
-- [ ] [Ollama](https://ollama.com/) installed and running
-- [ ] Python 3.10 or higher available
-
-<br/>
-
-**1 &nbsp;—&nbsp; Clone**
+You need [Ollama](https://ollama.com/) installed and running, and Python 3.10 or newer.
 
 ```bash
 git clone https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG.git
 cd CORTEX-AI-SUPER-RAG
-```
-
-**2 &nbsp;—&nbsp; Install**
-
-```bash
 pip install -r requirements.txt
+
+ollama pull llama3.1:8b          # the chat model (any Ollama model works)
+ollama pull nomic-embed-text     # the embedding model (required)
+
+python -m streamlit run app.py   # then open http://localhost:8501
 ```
 
-> **Windows only:** if you get a `c10.dll` DLL error on first run (seen with recent torch builds), pin PyTorch to a stable CPU build:
-> ```bash
-> pip uninstall torch -y
-> pip install "torch==2.5.1" --index-url https://download.pytorch.org/whl/cpu
-> ```
+Optional: `cp .env.example .env` to change the models, the Ollama URL or where indexes are stored. On Linux, `./install.sh` does the Ollama, model and dependency steps for you.
 
-**3 &nbsp;—&nbsp; Pull models**
-
-```bash
-ollama pull llama3.1:8b          # LLM  (swap for any model you prefer)
-ollama pull nomic-embed-text     # Embeddings  (required)
-```
-
-**4 &nbsp;—&nbsp; Configure (optional)**
-
-```bash
-cp .env.example .env             # change models, Ollama URL, index folder
-```
-
-**5 &nbsp;—&nbsp; Run**
-
-```bash
-python -m streamlit run app.py
-```
-
-Open **http://localhost:8501**
-
-> Use `python -m streamlit run` (not bare `streamlit run`) to ensure the correct Python environment is picked up.
+> **Windows:** if you get a `c10.dll` error on first run, install a stable CPU build of PyTorch:
+> `pip uninstall torch -y && pip install "torch==2.5.1" --index-url https://download.pytorch.org/whl/cpu`
 
 <br/>
 
----
+## What you get
+
+- **Cited answers.** Each answer lists its sources as `file.pdf · p.12`, with the passage it used.
+- **Saved knowledge bases.** Indexes are stored on disk under a name you choose, reopen automatically, and can be added to later.
+- **Follow-up questions that work.** "What about the year before?" is rewritten into a complete question before searching.
+- **A visible pipeline.** Each answer shows how long every stage took, and the model's reasoning when the model produces it.
+- **Measurement built in.** Run a question set through different pipeline settings and compare hit rate, MRR, correctness and faithfulness.
 
 <br/>
 
-<h2 align="center">🤖 &nbsp; Works with any Ollama model</h2>
+## How a question is answered
+
+```
+ your question
+      │
+      ├─ semantic cache (optional) ── similar question already answered? ──► reuse it
+      │
+      ▼
+ 1. rewrite follow-ups into a standalone question        (when there is chat history)
+ 2. expand the query:  HyDE hypothetical answer  or  RAG-Fusion query variants
+ 3. hybrid search:     BM25 keywords  +  FAISS vectors            (merged, RRF for Fusion)
+ 4. entity graph:      add passages about the same names          (GraphRAG)
+ 5. rerank:            cross-encoder scores every passage against the question
+ 6. relevance check:   the LLM grades each passage, drops the ones that don't help (CRAG)
+      │
+      ▼
+ answer, streamed with [Source N] citations  ──►  sources shown as file · page
+```
+
+At indexing time, documents are split into chunks that keep their file name and page number. With Contextual Retrieval on, the LLM also writes one sentence placing each chunk in its document before it's embedded.
 
 <br/>
 
-The model selector in the sidebar auto-populates from your locally installed Ollama models. Swap freely — no config change needed.
+## The techniques
 
-<br/>
-
-| Model | Params | Speed | Notes |
+| Technique | What it does | On by default | Cost |
 |---|---|---|---|
-| `llama3.1:8b` | 8B | ⚡⚡⚡ | Default · best all-round balance |
-| `qwen2.5:7b` | 7B | ⚡⚡⚡ | Strong on multilingual documents |
-| `mistral:7b` | 7B | ⚡⚡⚡ | Fast, great for long documents |
-| `llama3.1:70b` | 70B | ⚡ | Best quality when speed isn't priority |
-| `qwen2.5-coder:7b` | 7B | ⚡⚡⚡ | Best for code / technical docs |
+| Hybrid search (BM25 + FAISS) | Keyword search catches exact names and figures; vector search catches paraphrases | Always | Fast |
+| Follow-up rewriting | Turns "and last year?" into a full question using the chat history | Always | One LLM call when there is history |
+| [HyDE](https://arxiv.org/abs/2212.10496) | Writes a hypothetical answer and searches with it, helping short or vague questions | Yes | One LLM call |
+| GraphRAG (lightweight) | Links entities that appear together in chunks and pulls in related passages | Yes | Fast |
+| Neural reranking | A cross-encoder (`ms-marco-MiniLM-L-6-v2`) reorders candidates by relevance | Yes | Fast on CPU |
+| [RAG-Fusion](https://arxiv.org/abs/2402.03367) | Searches with several rewordings and merges the results with Reciprocal Rank Fusion | No | One LLM call, several searches |
+| [Corrective RAG](https://arxiv.org/abs/2401.15884) | The LLM grades each retrieved passage and drops irrelevant ones | No | One LLM call per passage |
+| [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) | Adds a situating sentence to every chunk before indexing | No | One LLM call per chunk at upload |
+| Semantic cache | Reuses an earlier answer to a near-identical question, per knowledge base and settings | No | One embedding call |
+| Reasoning panel | Streams the model's `<think>` reasoning | Yes | Best with reasoning models (qwen3, deepseek-r1) |
+
+The GraphRAG here is a heuristic entity co-occurrence graph, not Microsoft's GraphRAG with LLM-extracted relations and community summaries.
 
 <br/>
 
----
+## Benchmark
+
+We're running Cortex on [FinanceBench](https://arxiv.org/abs/2311.11944): 150 questions written by financial analysts over 84 real SEC filings, most of them numerical and table-heavy. For reference, the 2023 paper reports that GPT-4 Turbo with a standard retrieval setup answered 81% of these questions incorrectly or refused.
+
+**Status: running now, fully local (Llama 3.1 8B, nomic-embed-text, a laptop CPU).** Results for every pipeline configuration, including a plain vector-search baseline, will be posted here with the raw per-question output. They won't be cherry-picked.
+
+To reproduce it yourself:
+
+```bash
+python -m eval.datasets.financebench          # downloads the questions and the 84 filings it needs
+python -m eval.run_eval --golden eval/data/financebench/golden.jsonl \
+    --docs eval/data/financebench/pdfs --collection financebench --retrieval-only
+```
+
+The FinanceBench annotations are CC-BY-NC-4.0, so they're downloaded on demand rather than bundled here.
+
+<br/>
+
+## Measure it on your own documents
+
+```bash
+# Smoke test on the bundled sample document
+python -m eval.run_eval --golden eval/golden_example.jsonl --docs eval/sample_docs
+
+# Your knowledge base, a few configurations, a stronger judge model
+python -m eval.run_eval --golden my_questions.jsonl --collection contracts-2026 \
+    --configs naive hybrid app-default full --judge-model llama3.1:70b
+```
+
+A golden set is JSONL, one question per line:
+
+```json
+{"question": "How many days of annual leave?", "answer": "24 days", "source": "handbook.pdf", "page": 4}
+```
+
+`source`, `page` and optional `keywords` decide whether a retrieved chunk counts as a hit; `answer` is the reference for the correctness judge. Available configurations: `naive` (vector search only), `hybrid`, `+hyde`, `+graph`, `+rerank`, `+fusion`, `+crag`, `app-default` and `full`. Reports go to `eval/results/<timestamp>/`, and long runs can be interrupted and resumed.
+
+<br/>
+
+## Knowledge bases
+
+Everything you index is saved to `indexes/<name>/` (FAISS index, chunks and a manifest), so a refresh or restart doesn't lose it. Pick or create a knowledge base from the sidebar; the last one opens automatically. You can add files at any time (duplicates are skipped), unload a knowledge base to free memory, or delete it. Set `INDEX_DIR` to store indexes elsewhere.
+
+<br/>
+
+## Models
+
+The sidebar lists every model installed in Ollama, so you can switch without changing any config.
+
+| Model | Notes |
+|---|---|
+| `llama3.1:8b` | Default; good all-round balance on a laptop |
+| `qwen2.5:7b` | Strong on multilingual documents |
+| `qwen3:8b`, `deepseek-r1:8b` | Reasoning models; the reasoning panel shows their real thinking |
+| `llama3.1:70b` | Much better answers if you have the hardware |
+
+On a CPU-only laptop, expect around 20–30 seconds per answer with an 8B model. A GPU makes it several times faster.
 
 <br/>
 
 <details>
-<summary><b>🐳 &nbsp; Docker setup</b></summary>
+<summary><b>Docker</b></summary>
 
 <br/>
 
-**Option A — Ollama on host (recommended)**
+**Ollama on the host (recommended)**
 
 ```bash
-docker-compose build && docker-compose up
+docker compose up --build
 ```
 
-Ollama runs natively; the container connects via the host network.
+The container reaches Ollama on the host through `host.docker.internal`, and indexes are kept in a named volume.
 
-<br/>
-
-**Option B — Everything in Docker**
+**Everything in Docker**
 
 ```yaml
-version: "3.8"
 services:
   ollama:
-    image: ghcr.io/jmorganca/ollama:latest
+    image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
 
   cortex-rag-service:
     build: .
@@ -295,144 +198,79 @@ services:
       - OLLAMA_API_URL=http://ollama:11434
       - MODEL=llama3.1:8b
       - EMBEDDINGS_MODEL=nomic-embed-text:latest
-      - CROSS_ENCODER_MODEL=cross-encoder/ms-marco-MiniLM-L-6-v2
+    volumes:
+      - cortex-indexes:/data
     depends_on:
       - ollama
+
+volumes:
+  ollama:
+  cortex-indexes:
 ```
 
-```bash
-docker-compose up
-```
+Then pull the models into the Ollama container once: `docker compose exec ollama ollama pull llama3.1:8b && docker compose exec ollama ollama pull nomic-embed-text`.
 
 </details>
 
 <br/>
 
----
+## Project layout
 
-<br/>
-
-<h2 align="center">📚 &nbsp; Knowledge bases</h2>
-
-<br/>
-
-Everything you index is saved to `indexes/<name>/` (FAISS index + chunks + manifest), so a page refresh or restart doesn't lose it.
-
-- **Switch or create** knowledge bases from the sidebar picker. The last one opens automatically.
-- **Add files** to a loaded knowledge base at any time; files already in it are skipped.
-- **Unload** frees memory and keeps the knowledge base on disk. **Delete** removes it permanently.
-- Every answer cites its sources as `file.pdf · p.12`. A caption under each answer shows how long each stage took (rewrite, search, rerank, CRAG, generate).
-
-Set `INDEX_DIR` to store indexes elsewhere. The Docker setup keeps them in a named volume.
-
-<br/>
-
----
-
-<br/>
-
-<h2 align="center">📏 &nbsp; Measure it</h2>
-
-<br/>
-
-The eval harness runs a golden question set through each retrieval configuration and reports hit rate, MRR, LLM-judged correctness and faithfulness, and latency. Use it to see which techniques actually help on *your* documents.
-
-```bash
-# Try it on the bundled sample handbook
-python -m eval.run_eval --golden eval/golden_example.jsonl --docs eval/sample_docs
-
-# Retrieval metrics only (fast, no LLM judging)
-python -m eval.run_eval --golden eval/golden_example.jsonl --collection eval --retrieval-only
-
-# Your own knowledge base, selected configs, a stronger judge
-python -m eval.run_eval --golden my_questions.jsonl --collection contracts-2026     --configs hybrid app-default full --judge-model llama3.1:70b
 ```
-
-Golden set format (JSONL, one question per line):
-
-```json
-{"question": "How many days of annual leave?", "answer": "24 days", "source": "handbook.pdf", "page": 4, "keywords": ["24 days"]}
-```
-
-**Public benchmark: FinanceBench.** 150 expert-written questions over 84 real SEC filings ([Islam et al., 2023](https://arxiv.org/abs/2311.11944)). The script downloads only the filings the questions need; the annotations are CC-BY-NC-4.0, so they aren't bundled with this repo.
-
-```bash
-python -m eval.datasets.financebench
-python -m eval.run_eval --golden eval/data/financebench/golden.jsonl     --docs eval/data/financebench/pdfs --collection financebench --retrieval-only
-```
-
-`source` / `page` / `keywords` decide whether a retrieved chunk counts as a hit. `answer` is the reference for the correctness judge. Reports are written to `eval/results/<timestamp>/`.
-
-> The bundled sample is only 4 chunks, so it checks that the harness works rather than telling techniques apart. Use 30+ questions over a real corpus for meaningful numbers.
-
-<br/>
-
-**Tests**
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest
+app.py                     Streamlit UI
+utils/
+  retriever_pipeline.py    query-time pipeline (rewrite → search → graph → rerank → CRAG)
+  advanced_rag.py          HyDE, RAG-Fusion/RRF, CRAG grading, contextual retrieval, query rewriting
+  build_graph.py           entity co-occurrence graph
+  store.py                 saved knowledge bases, pipeline assembly
+  loaders.py               PDF / DOCX / TXT / MD loading and chunking
+  generation.py            prompt building, <think> stream parsing, citations
+eval/                      evaluation harness, FinanceBench loader, sample data
+tests/                     pytest suite (run: pip install -r requirements-dev.txt && python -m pytest)
 ```
 
 <br/>
 
+## Limitations
+
+Worth knowing before you rely on it:
+
+- **Single user.** There is no login and no per-document permissions. Don't expose it to the internet as is.
+- **No OCR.** Scanned PDFs without a text layer come through empty.
+- **Tables are extracted as plain text**, which loses some structure in financial statements.
+- **Speed depends on your hardware.** RAG-Fusion, CRAG and Contextual Retrieval add LLM calls; turn on only what helps (the eval harness tells you which).
+- **Streamlit UI.** There's no REST API yet.
+
+Planned next: a FastAPI backend, authentication with document-level permissions, OCR, full CRAG with re-querying, and LLM-extracted entity graphs.
+
+<br/>
+
+## Tech stack
+
+Streamlit · Ollama · LangChain · FAISS · rank-bm25 · NetworkX · sentence-transformers · pypdf · docx2txt
+
+<br/>
+
+## Using this at work?
+
+The engine here is the open-source core. If your team needs it running on its own infrastructure, connected to SharePoint, Confluence or databases, with sign-in and document-level permissions, we build and deploy that per engagement, starting with a pilot measured on your own documents. Details at **[cortex-rag-beta.vercel.app](https://cortex-rag-beta.vercel.app/)**.
+
+<br/>
+
+## Contributing
+
+Issues and pull requests are welcome. Please run `python -m pytest` before opening a PR. If a change affects retrieval quality, include before-and-after numbers from the eval harness.
+
+<br/>
+
 ---
-
-<br/>
-
-<h2 align="center">🔩 &nbsp; Tech Stack</h2>
-
-<br/>
-
-<table>
-<tr>
-<td><b>UI</b></td><td>Streamlit 1.40+</td>
-<td><b>LLM inference</b></td><td>Ollama (local)</td>
-</tr>
-<tr>
-<td><b>Vector store</b></td><td>FAISS</td>
-<td><b>Sparse retrieval</b></td><td>BM25 (rank-bm25)</td>
-</tr>
-<tr>
-<td><b>Knowledge graph</b></td><td>NetworkX</td>
-<td><b>Neural reranker</b></td><td>sentence-transformers CrossEncoder</td>
-</tr>
-<tr>
-<td><b>Embeddings</b></td><td>nomic-embed-text via Ollama</td>
-<td><b>RAG orchestration</b></td><td>LangChain + langchain-classic</td>
-</tr>
-<tr>
-<td><b>Document loading</b></td><td>PyMuPDF · Docx2txt · TextLoader</td>
-<td><b>Supported files</b></td><td>PDF · DOCX · TXT · MD</td>
-</tr>
-</table>
-
-<br/>
-
----
-
-<br/>
 
 <p align="center">
-  Built with curiosity &nbsp;·&nbsp; runs on your machine &nbsp;·&nbsp; owned by you
-  <br/><br/>
-  <a href="https://www.reddit.com/user/akhilpanja/">Reddit</a>
-  &nbsp;·&nbsp;
   <a href="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/issues">Issues</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/SaiAkhil066/CORTEX-AI-SUPER-RAG/pulls">Pull Requests</a>
+  <a href="https://www.reddit.com/user/akhilpanja/">Reddit</a>
+  &nbsp;·&nbsp;
+  MIT License
   <br/><br/>
-  <sub><i>The future of retrieval-augmented AI is local — no internet required.</i></sub>
-</p>
-
----
-
-<p align="center">
-  <b>If Cortex RAG saved you time, consider buying us a coffee ☕</b>
-  <br/><br/>
-  <a href="https://razorpay.me/@saiakhil">
-    <img src="https://img.shields.io/badge/Support%20this%20project-Razorpay-02042B?style=for-the-badge&logo=razorpay&logoColor=3395FF"/>
-  </a>
-  <br/><br/>
-  <sub>Every contribution keeps this project free and open-source.</sub>
+  <sub>If Cortex RAG saved you time, you can <a href="https://razorpay.me/@saiakhil">support the project</a>.</sub>
 </p>

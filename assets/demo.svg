@@ -125,7 +125,7 @@
   <rect x="22"  y="385" width="120" height="20" rx="3" fill="#13162c"/>
   <text x="82"  y="399" class="m" font-size="10.5" fill="#8b7bff" text-anchor="middle">📄  3 sources cited</text>
   <rect x="152" y="385" width="104" height="20" rx="3" fill="#13162c"/>
-  <text x="204" y="399" class="m" font-size="10.5" fill="#2dd4bf" text-anchor="middle">⚡  1.2 s total</text>
+  <text x="204" y="399" class="m" font-size="10.5" fill="#2dd4bf" text-anchor="middle">⏱  stages timed</text>
   <rect x="266" y="385" width="152" height="20" rx="3" fill="#13162c"/>
   <text x="342" y="399" class="m" font-size="10.5" fill="#d97706" text-anchor="middle">💾  cached for next time</text>
 </g>
