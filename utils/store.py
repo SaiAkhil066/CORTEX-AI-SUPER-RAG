@@ -78,6 +78,30 @@ def load_collection(name, embeddings, root=None):
     return vector_store, chunks, manifest
 
 
+def embedding_drift(vector_store, embeddings, samples=3):
+    """Re-embed a few indexed chunks and compare with their stored vectors.
+
+    Returns the lowest cosine similarity (1.0 = identical). A low value means
+    the embedding runtime changed since indexing (different Ollama build,
+    model version or backend), so queries and index no longer share a vector
+    space and vector search quietly degrades. Returns None if it can't check.
+    """
+    try:
+        import numpy as np
+        n = vector_store.index.ntotal
+        positions = sorted({0, n // 2, n - 1})[:samples]
+        texts = [vector_store.docstore.search(vector_store.index_to_docstore_id[i]).page_content for i in positions]
+        fresh = embeddings.embed_documents(texts)
+        sims = []
+        for i, v in zip(positions, fresh):
+            stored = vector_store.index.reconstruct(i)
+            v = np.asarray(v, dtype="float32")
+            sims.append(float(stored @ v / (np.linalg.norm(stored) * np.linalg.norm(v))))
+        return min(sims)
+    except Exception:
+        return None
+
+
 def delete_collection(name, root=None):
     path = collection_path(name, root)
     if os.path.isdir(path):

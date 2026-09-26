@@ -91,6 +91,12 @@ def load_collection_into_session(name, reranker, embedding_model, base_url):
     if loaded is None:
         return False
     vector_store, chunks, manifest = loaded
+    drift = store.embedding_drift(vector_store, embeddings)
+    if drift is not None and drift < 0.98:
+        st.warning(
+            f"'{name}' was indexed with a different embedding setup than the one running now "
+            f"(match {drift:.2f}). Search quality will suffer until you re-index: delete it and upload the files again."
+        )
     if manifest.get("embedding_model") not in (None, embedding_model):
         st.warning(
             f"'{name}' was indexed with {manifest['embedding_model']} but the current "

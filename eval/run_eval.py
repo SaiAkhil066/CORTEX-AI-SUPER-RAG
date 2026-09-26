@@ -220,6 +220,13 @@ def run(args):
     if loaded is None:
         raise SystemExit(f"Knowledge base '{args.collection}' not found. Pass --docs DIR to build it.")
     vector_store, chunks, _ = loaded
+    drift = store.embedding_drift(vector_store, embeddings)
+    if drift is not None and drift < 0.98 and not args.allow_embedding_drift:
+        raise SystemExit(
+            f"Embedding drift: stored vectors match fresh embeddings at only {drift:.3f} cosine. "
+            f"The embedding runtime changed since '{args.collection}' was indexed, so results would be "
+            f"invalid. Re-index with --docs DIR --reindex (or pass --allow-embedding-drift).")
+    log(f"Embedding check passed (cosine {drift:.4f})" if drift is not None else "Embedding check skipped")
 
     configs = {n: CONFIGS[n] for n in (args.configs or CONFIGS)}
     needs_reranker = any(c.get("enable_reranking") for c in configs.values())
@@ -386,6 +393,8 @@ def main():
     p.add_argument("--retrieval-only", action="store_true", help="skip generation and LLM judging")
     p.add_argument("--tag", help="suffix for the results folder name")
     p.add_argument("--resume", metavar="DIR", help="continue an interrupted run in this results folder")
+    p.add_argument("--allow-embedding-drift", action="store_true",
+                   help="run even if the index was built with a different embedding runtime")
     p.add_argument("--out", default=os.path.join("eval", "results"), help="output folder")
     run(p.parse_args())
 

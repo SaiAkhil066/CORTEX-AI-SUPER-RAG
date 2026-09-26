@@ -89,3 +89,14 @@ def test_build_pipeline_bm25_keeps_metadata():
     pipeline = store.build_pipeline(FAISS.from_documents(chunks, DeterministicFakeEmbedding(size=8)), chunks, k=1)
     bm25 = pipeline["ensemble"].retrievers[0]
     assert bm25.invoke("gamma")[0].metadata == {"source": "b.txt", "page": 2}
+
+
+def test_embedding_drift_detects_changed_runtime():
+    chunks = _chunks()
+    vs = FAISS.from_documents(chunks, DeterministicFakeEmbedding(size=32))
+    assert store.embedding_drift(vs, DeterministicFakeEmbedding(size=32)) > 0.999
+
+    class Shifted(DeterministicFakeEmbedding):
+        def embed_documents(self, texts):
+            return [[x + 0.5 for x in v] for v in super().embed_documents(texts)]
+    assert store.embedding_drift(vs, Shifted(size=32)) < 0.98
