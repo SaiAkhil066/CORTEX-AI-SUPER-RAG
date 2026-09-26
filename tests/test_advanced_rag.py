@@ -54,3 +54,13 @@ def test_grade_documents_preserves_order(monkeypatch):
                         lambda uri, model, prompt, **k: "yes" if "keep" in prompt else "no")
     verdicts = grade_documents("q", _docs("keep 1", "drop", "keep 2", "drop"), "u", "m")
     assert verdicts == [True, False, True, False]
+
+
+def test_query_variants_skip_model_preamble(monkeypatch):
+    monkeypatch.setattr(advanced_rag, "_ollama_generate", lambda *a, **k:
+                        "Here are three alternative search queries:\n1. 3M capex fiscal 2018\n"
+                        "2. \"3M purchases of PP&E in 2018\"\nSure:\n3. 3M cash flow statement 2018")
+    from utils.advanced_rag import generate_query_variants
+    assert generate_query_variants("What was 3M's 2018 capex?", "u", "m", n=3) == [
+        "What was 3M's 2018 capex?", "3M capex fiscal 2018", "3M purchases of PP&E in 2018",
+        "3M cash flow statement 2018"]

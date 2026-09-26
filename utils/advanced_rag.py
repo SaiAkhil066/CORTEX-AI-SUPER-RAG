@@ -9,6 +9,7 @@ fallbacks) if the LLM call fails, so the main pipeline never crashes.
 from concurrent.futures import ThreadPoolExecutor
 import requests
 import math
+import re
 
 # Ollama serves a few requests concurrently (OLLAMA_NUM_PARALLEL); more
 # workers than that just queue up server-side.
@@ -103,10 +104,19 @@ def generate_query_variants(query, uri, model, n=3):
     out = _ollama_generate(uri, model, prompt, temperature=0.4, timeout=45)
     variants = []
     for line in out.splitlines():
-        v = line.strip().lstrip("0123456789.-*) ").strip()
-        if v and v.lower() != query.lower():
-            variants.append(v)
+        v = _LIST_MARKER.sub("", line.strip()).strip().strip('"')
+        # Models often open with "Here are three alternative queries:". Searching
+        # with that line pulls the same generic passages into every question.
+        if not v or v.endswith(":") or _PREAMBLE.match(v) or v.lower() == query.lower():
+            continue
+        variants.append(v)
     return [query] + variants[:n]
+
+
+# "1. ", "2) ", "- ", "* ", "• " at the start of a line (not digits that belong to
+# the text, like "3M" or "2022 revenue")
+_LIST_MARKER = re.compile(r"^(?:\d{1,2}[.)]|[-*•])\s+")
+_PREAMBLE = re.compile(r"^(here (are|is)|sure\b|okay\b|certainly\b|alternative (search )?quer)", re.I)
 
 
 def reciprocal_rank_fusion(ranked_lists, k=60):
@@ -153,7 +163,7 @@ def generate_suggested_questions(sample_text, uri, model, n=3):
     out = _ollama_generate(uri, model, prompt, temperature=0.3, timeout=60)
     questions = []
     for line in out.splitlines():
-        q = line.strip().lstrip("0123456789.-*) ").strip().strip('"')
+        q = _LIST_MARKER.sub("", line.strip()).strip().strip('"')
         if q.endswith("?") and 8 <= len(q) <= 120:
             questions.append(q)
     return questions[:n]
