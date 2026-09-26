@@ -341,7 +341,7 @@ defaults = {
     "rag_enabled": True,
     "documents_loaded": False,
     "processing": False,
-    "enable_hyde": True,
+    "enable_hyde": False,        # hurt retrieval on FinanceBench; opt-in
     "enable_reranking": True,
     "enable_graph_rag": True,
     "enable_thinking": True,

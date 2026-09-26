@@ -66,6 +66,7 @@ CONFIGS = {
     "+rerank": {"enable_reranking": True},
     "+routing": {"enable_routing": True},
     "routing+rerank": {"enable_routing": True, "enable_reranking": True},
+    "routing+rerank+fusion": {"enable_routing": True, "enable_reranking": True, "enable_fusion": True},
     "+fusion": {"enable_fusion": True},
     "+crag": {"enable_crag": True},
     "app-default": {"enable_routing": True, "enable_hyde": True, "enable_graph_rag": True, "enable_reranking": True},

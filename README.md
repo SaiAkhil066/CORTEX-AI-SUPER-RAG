@@ -93,7 +93,7 @@ At indexing time, documents are split into chunks that keep their file name and 
 |---|---|---|---|
 | Hybrid search (BM25 + FAISS) | Keyword search catches exact names and figures; vector search catches paraphrases | Always | Fast |
 | Follow-up rewriting | Turns "and last year?" into a full question using the chat history | Always | One LLM call when there is history |
-| [HyDE](https://arxiv.org/abs/2212.10496) | Writes a hypothetical answer and searches with it, helping short or vague questions | Yes | One LLM call |
+| [HyDE](https://arxiv.org/abs/2212.10496) | Writes a hypothetical answer and searches with it; can help short or vague questions | No (lowered hit rate on FinanceBench) | One LLM call |
 | GraphRAG (lightweight) | Links entities that appear together in chunks and pulls in related passages | Yes | Fast |
 | Neural reranking | A cross-encoder (`ms-marco-MiniLM-L-6-v2`) reorders candidates by relevance | Yes | Fast on CPU |
 | [RAG-Fusion](https://arxiv.org/abs/2402.03367) | Searches with several rewordings and merges the results with Reciprocal Rank Fusion | No | One LLM call, several searches |

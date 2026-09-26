@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
     "enable_bm25": True,          # False = vector-only search (naive RAG baseline)
     "enable_condense": True,
     "enable_routing": True,       # search only the files a question names
-    "enable_hyde": True,
+    "enable_hyde": False,
     "enable_fusion": False,
     "enable_graph_rag": True,
     "enable_reranking": True,
