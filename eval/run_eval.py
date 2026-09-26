@@ -101,6 +101,13 @@ def log(msg):
     print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
 
 
+def ollama_up(base_url):
+    try:
+        return requests.get(f"{base_url}/api/tags", timeout=5).status_code == 200
+    except Exception:
+        return False
+
+
 def load_golden(path):
     with open(path, encoding="utf-8") as f:
         items = [json.loads(line) for line in f if line.strip() and not line.lstrip().startswith("//")]
@@ -203,6 +210,8 @@ def run(args):
     judge = args.judge_model or model
     embedding_model = os.getenv("EMBEDDINGS_MODEL", "nomic-embed-text:latest")
     embeddings = OllamaEmbeddings(model=embedding_model, base_url=base_url)
+    if not ollama_up(base_url):
+        raise SystemExit(f"Ollama is not reachable at {base_url}. Start it with `ollama serve` and retry.")
 
     if args.docs:
         ingest(args.docs, args.collection, embeddings, embedding_model, reindex=args.reindex)
@@ -227,22 +236,46 @@ def run(args):
     mode = "retrieval-only" if args.retrieval_only else "full"
     log(f"{len(golden)} questions × {len(configs)} configs ({mode}) · model={model} judge={judge}")
 
-    tag = args.tag or f"{args.collection}-{mode}"
-    out_dir = os.path.join(args.out, f"{datetime.now():%Y%m%d-%H%M%S}-{tag}")
-    os.makedirs(out_dir, exist_ok=True)
-    log(f"Writing results to {out_dir}")
-
     results = {}
+    if args.resume:
+        out_dir = args.resume
+        if os.path.isfile(os.path.join(out_dir, "results.json")):
+            with open(os.path.join(out_dir, "results.json"), encoding="utf-8") as f:
+                results = {n: r for n, r in json.load(f).items() if n in configs}
+        log(f"Resuming in {out_dir} ({len(results)} config(s) already complete)")
+    else:
+        tag = args.tag or f"{args.collection}-{mode}"
+        out_dir = os.path.join(args.out, f"{datetime.now():%Y%m%d-%H%M%S}-{tag}")
+        os.makedirs(out_dir, exist_ok=True)
+        log(f"Writing results to {out_dir}")
+
     for name, overrides in configs.items():
+        if name in results:
+            continue
         cfg = {**BASE, **overrides, "max_contexts": args.k}
         rows, t_cfg = [], time.perf_counter()
         rows_path = os.path.join(out_dir, f"rows-{name.replace('+', 'plus-')}.jsonl")
-        with open(rows_path, "w", encoding="utf-8") as rows_file:
+        if args.resume and os.path.isfile(rows_path):
+            with open(rows_path, encoding="utf-8") as f:
+                rows = [json.loads(line) for line in f if line.strip()]
+            rows = [r for r in rows if r["question"] in golden_by_q]
+            if rows:
+                log(f"  [{name}] resuming after {len(rows)} saved question(s)")
+        done_q = {r["question"] for r in rows}
+        resumed = len(rows)
+        with open(rows_path, "a" if resumed else "w", encoding="utf-8") as rows_file:
             for i, item in enumerate(golden, start=1):
+                if item["question"] in done_q:
+                    continue
                 t0 = time.perf_counter()
                 try:
                     docs, info = retrieve_documents(item["question"], uri, model, pipeline, cfg)
                 except Exception as e:
+                    if not ollama_up(base_url):
+                        # Don't record misses for an outage: stop, so --resume picks up here
+                        log(f"  ! Ollama is unreachable at {base_url}; stopping. "
+                            f"Start it, then rerun with --resume {out_dir}")
+                        sys.exit(3)
                     log(f"  ! [{name}] retrieval failed on q{i}: {e}")
                     docs, info = [], {}
                 row = {
@@ -269,8 +302,9 @@ def run(args):
                 rows_file.write(json.dumps(row, default=str) + "\n")
                 rows_file.flush()
                 if i % 10 == 0 or i == len(golden):
-                    el = time.perf_counter() - t_cfg
-                    log(f"  [{name}] {i}/{len(golden)} · {el / i:.1f}s/q · ~{el / i * (len(golden) - i) / 60:.0f} min left")
+                    el, new = time.perf_counter() - t_cfg, len(rows) - resumed
+                    per_q = el / max(new, 1)
+                    log(f"  [{name}] {i}/{len(golden)} · {per_q:.1f}s/q · ~{per_q * (len(golden) - i) / 60:.0f} min left")
 
         summary = summarize(rows, golden_by_q, args.retrieval_only)
         by_type = {}
@@ -350,6 +384,7 @@ def main():
     p.add_argument("--judge-model", help="LLM judge model (default: same as --model)")
     p.add_argument("--retrieval-only", action="store_true", help="skip generation and LLM judging")
     p.add_argument("--tag", help="suffix for the results folder name")
+    p.add_argument("--resume", metavar="DIR", help="continue an interrupted run in this results folder")
     p.add_argument("--out", default=os.path.join("eval", "results"), help="output folder")
     run(p.parse_args())
 
