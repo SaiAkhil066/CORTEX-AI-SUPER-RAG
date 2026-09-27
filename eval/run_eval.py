@@ -102,6 +102,13 @@ def log(msg):
     print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
 
 
+def ollama_version(base_url):
+    try:
+        return requests.get(f"{base_url}/api/version", timeout=5).json().get("version")
+    except Exception:
+        return None
+
+
 def ollama_up(base_url):
     try:
         return requests.get(f"{base_url}/api/tags", timeout=5).status_code == 200
@@ -132,7 +139,8 @@ def ingest(docs_dir, collection, embeddings, embedding_model, reindex=False, che
     if loaded:
         vector_store, chunks, manifest = loaded
     else:
-        vector_store, chunks, manifest = None, [], {"embedding_model": embedding_model, "files": []}
+        vector_store, chunks, manifest = None, [], {"embedding_model": embedding_model, "files": [],
+                                                    "ollama_version": ollama_version(os.getenv("OLLAMA_API_URL", "http://localhost:11434"))}
     done = {f["name"] for f in manifest["files"]}
     todo = [n for n in names if n not in done]
     if not todo:
@@ -213,6 +221,7 @@ def run(args):
     embeddings = OllamaEmbeddings(model=embedding_model, base_url=base_url)
     if not ollama_up(base_url):
         raise SystemExit(f"Ollama is not reachable at {base_url}. Start it with `ollama serve` and retry.")
+    log(f"Ollama {ollama_version(base_url)} at {base_url} · embeddings {embedding_model}")
 
     if args.docs:
         ingest(args.docs, args.collection, embeddings, embedding_model, reindex=args.reindex)
