@@ -41,3 +41,17 @@ def test_first_doc_hit_rank_ignores_page():
     docs = [_d("x", source="b.pdf"), _d("y", source="a.pdf", page=9)]
     assert first_doc_hit_rank(docs, {"source": "a.pdf", "page": 2}) == 2
     assert first_doc_hit_rank(docs, {"keywords": ["x"]}) is None
+
+
+def test_strict_answer_scoring():
+    from eval.analyze_answers import numeric_match, is_refusal, reference_number
+    assert numeric_match("3M spent $1,577 million on capex", "$1577.00")
+    assert numeric_match("capex was 1.577 billion", "$1577.00")        # unit shift
+    assert not numeric_match("It was $1,373 million", "$1577.00")
+    assert numeric_match("The EBITDA margin is 16.5%", "16.5%")
+    assert not numeric_match("about 17.9%", "16.5%")
+    assert numeric_match("anything", "Yes, the company grew") is None     # non-numeric reference
+    assert reference_number("Yes, not only they distribute dividends") is None
+    assert is_refusal("Unfortunately, I couldn't find any information about 3M")
+    assert is_refusal("These figures are not provided in the sources")
+    assert not is_refusal("3M spent $1,577 million, as shown in the cash flow statement")
