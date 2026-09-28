@@ -58,6 +58,7 @@ Optional: `cp .env.example .env` to change the models, the Ollama URL or where i
 
 - **Cited answers.** Each answer lists its sources as `file.pdf · p.12`, with the passage it used.
 - **Saved knowledge bases.** Indexes are stored on disk under a name you choose, reopen automatically, and can be added to later.
+- **Search that stays in the right document.** When a question names a file in your knowledge base (a company, product or report), search is limited to that file.
 - **Follow-up questions that work.** "What about the year before?" is rewritten into a complete question before searching.
 - **A visible pipeline.** Each answer shows how long every stage took, and the model's reasoning when the model produces it.
 - **Measurement built in.** Run a question set through different pipeline settings and compare hit rate, MRR, correctness and faithfulness.
@@ -73,11 +74,12 @@ Optional: `cp .env.example .env` to change the models, the Ollama URL or where i
       │
       ▼
  1. rewrite follow-ups into a standalone question        (when there is chat history)
- 2. expand the query:  HyDE hypothetical answer  or  RAG-Fusion query variants
- 3. hybrid search:     BM25 keywords  +  FAISS vectors            (merged, RRF for Fusion)
- 4. entity graph:      add passages about the same names          (GraphRAG)
- 5. rerank:            cross-encoder scores every passage against the question
- 6. relevance check:   the LLM grades each passage, drops the ones that don't help (CRAG)
+ 2. route:             question names a file? search only that file
+ 3. expand the query:  HyDE or RAG-Fusion variants                (optional, off by default)
+ 4. hybrid search:     BM25 keywords + FAISS vectors, 20 candidates each, fused with RRF
+ 5. entity graph:      add passages about the same names          (GraphRAG)
+ 6. rerank:            cross-encoder scores every passage against the question
+ 7. relevance check:   the LLM drops passages that don't help     (CRAG, optional, off by default)
       │
       ▼
  answer, streamed with [Source N] citations  ──►  sources shown as file · page
@@ -89,18 +91,21 @@ At indexing time, documents are split into chunks that keep their file name and 
 
 ## The techniques
 
-| Technique | What it does | On by default | Cost |
-|---|---|---|---|
-| Hybrid search (BM25 + FAISS) | Keyword search catches exact names and figures; vector search catches paraphrases | Always | Fast |
-| Follow-up rewriting | Turns "and last year?" into a full question using the chat history | Always | One LLM call when there is history |
-| [HyDE](https://arxiv.org/abs/2212.10496) | Writes a hypothetical answer and searches with it; can help short or vague questions | No (no retrieval gain on FinanceBench, adds ~20 s) | One LLM call |
-| GraphRAG (lightweight) | Links entities that appear together in chunks and pulls in related passages | Yes | Fast |
-| Neural reranking | A cross-encoder (`ms-marco-MiniLM-L-6-v2`) reorders candidates by relevance | Yes | Fast on CPU |
-| [RAG-Fusion](https://arxiv.org/abs/2402.03367) | Searches with several rewordings and merges the results with Reciprocal Rank Fusion | No | One LLM call, several searches |
-| [Corrective RAG](https://arxiv.org/abs/2401.15884) | The LLM grades each retrieved passage and drops irrelevant ones | No | One LLM call per passage |
-| [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) | Adds a situating sentence to every chunk before indexing | No | One LLM call per chunk at upload |
-| Semantic cache | Reuses an earlier answer to a near-identical question, per knowledge base and settings | No | One embedding call |
-| Reasoning panel | Streams the model's `<think>` reasoning | Yes | Best with reasoning models (qwen3, deepseek-r1) |
+| Technique | What it does | On by default | Cost | FinanceBench effect* |
+|---|---|---|---|---|
+| Hybrid search (BM25 + FAISS) | Keyword search catches exact names and figures; vector search catches paraphrases | Always | Fast | Neutral on its own |
+| Follow-up rewriting | Turns "and last year?" into a full question using the chat history | Always | One LLM call when there is history | Not measured (single-turn benchmark) |
+| **Source routing** | If the question names a file (e.g. a company), search only that file | Yes | Fast | **+4 pts alone, +15 with the reranker** |
+| Neural reranking | A cross-encoder (`ms-marco-MiniLM-L-6-v2`) reorders about 40 candidates by relevance | Yes | ~1.5 s on CPU | +4 pts alone, +15 with routing |
+| GraphRAG (lightweight) | Links entities that appear together in chunks and pulls in related passages | Yes | Fast | No measurable effect |
+| [RAG-Fusion](https://arxiv.org/abs/2402.03367) | Searches with several rewordings and merges the results with Reciprocal Rank Fusion | No | One LLM call, several searches | +7 pts alone, about 0 on top of routing + reranker |
+| [HyDE](https://arxiv.org/abs/2212.10496) | Writes a hypothetical answer and searches with it | No | One LLM call | No gain |
+| [Corrective RAG](https://arxiv.org/abs/2401.15884) | The LLM grades each retrieved passage and drops irrelevant ones | No | One LLM call per passage | −7 pts with an 8B grader (drops useful passages) |
+| [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) | Adds a situating sentence to every chunk before indexing | No | One LLM call per chunk at upload | Not measured (54k chunks × LLM call) |
+| Semantic cache | Reuses an earlier answer to a near-identical question, per knowledge base and settings | No | One embedding call | Not applicable |
+| Reasoning panel | Streams the model's `<think>` reasoning | Yes | Best with reasoning models (qwen3, deepseek-r1) | Not applicable |
+
+\* Change in "evidence page in the top 5" compared with plain hybrid search (25%), from the benchmark below. Your documents may behave differently, so measure with the eval harness.
 
 The GraphRAG here is a heuristic entity co-occurrence graph, not Microsoft's GraphRAG with LLM-extracted relations and community summaries.
 
@@ -108,7 +113,7 @@ The GraphRAG here is a heuristic entity co-occurrence graph, not Microsoft's Gra
 
 ## Benchmark
 
-We're running Cortex on [FinanceBench](https://arxiv.org/abs/2311.11944): 150 questions written by financial analysts over 84 real SEC filings, most of them numerical and table-heavy. For reference, the 2023 paper reports that GPT-4 Turbo with a standard retrieval setup answered 81% of these questions incorrectly or refused.
+We ran Cortex on [FinanceBench](https://arxiv.org/abs/2311.11944): 150 questions written by financial analysts over 84 real SEC filings, most of them numerical and table-heavy. For context only, the 2023 paper reports that GPT-4 Turbo with a standard retrieval setup answered 81% of these questions incorrectly or refused. That was graded by people on a different setup, so it isn't a head-to-head comparison.
 
 **Results** (fully local: Llama 3.1 8B + nomic-embed-text on Ollama, laptop; top 5 passages per question):
 
@@ -126,7 +131,15 @@ We're running Cortex on [FinanceBench](https://arxiv.org/abs/2311.11944): 150 qu
 | Correct (strict: judged correct and not a refusal) | 36% | **45%** |
 | Refused ("not in the sources") | 55% | 43% |
 
-What we took from it: source routing plus a reranker does most of the work at almost no cost; LLM-based extras add little on top; CRAG with a small grader drops useful passages; and when retrieval misses, the model mostly says so rather than inventing numbers. Calculations (ratios, margins) remain the weak spot for an 8B model. Grading uses an 8B judge plus strict rules, not human review. Full write-up, caveats and per-question output are produced by the harness.
+What we took from it: source routing plus a reranker does most of the work at almost no cost; LLM-based extras add little on top; CRAG with a small grader drops useful passages; and when retrieval misses, the model mostly says so rather than inventing numbers. Calculations (ratios, margins) remain the weak spot for an 8B model. Grading uses an 8B judge plus strict rules, not human review. Differences of 1–2 points are 1–3 questions out of 150, so treat them as ties.
+
+**Pitfalls we hit along the way**, all now fixed or guarded against:
+
+- 39 of the 84 filings are encrypted PDFs and were being skipped silently (fixed: `cryptography` is now a dependency).
+- RAG-Fusion searched with the model's preamble ("Here are three alternative search queries:") as if it were a query.
+- One question made the model loop, and Ollama kept generating after the client timed out, blocking every later request. Answers are now capped at `NUM_PREDICT` tokens (default 2048).
+- Two Ollama versions on the same machine produced different embeddings from the same model file. Mixing them silently broke vector search. The harness now logs the Ollama version and refuses to run when stored and fresh embeddings disagree, and the app warns you to re-index.
+- The 8B judge scored about 30 refusals per config as correct. Strict accuracy counts refusals as wrong, and a numeric check compares figures without any LLM.
 
 To reproduce it yourself:
 
@@ -134,6 +147,11 @@ To reproduce it yourself:
 python -m eval.datasets.financebench          # downloads the questions and the 84 filings it needs
 python -m eval.run_eval --golden eval/data/financebench/golden.jsonl \
     --docs eval/data/financebench/pdfs --collection financebench --retrieval-only
+
+# Answer accuracy (slow: about 2 minutes per question on a laptop), then strict scoring
+python -m eval.run_eval --golden eval/data/financebench/golden.jsonl \
+    --collection financebench --configs naive routing+rerank
+python -m eval.analyze_answers eval/results/<answers-folder>
 ```
 
 The FinanceBench annotations are CC-BY-NC-4.0, so they're downloaded on demand rather than bundled here.
@@ -157,7 +175,7 @@ A golden set is JSONL, one question per line:
 {"question": "How many days of annual leave?", "answer": "24 days", "source": "handbook.pdf", "page": 4}
 ```
 
-`source`, `page` and optional `keywords` decide whether a retrieved chunk counts as a hit; `answer` is the reference for the correctness judge. Available configurations: `naive` (vector search only), `hybrid`, `+hyde`, `+graph`, `+rerank`, `+fusion`, `+crag`, `app-default` and `full`. Reports go to `eval/results/<timestamp>/`, and long runs can be interrupted and resumed.
+`source`, `page` and optional `keywords` decide whether a retrieved chunk counts as a hit; `answer` is the reference for the correctness judge. Available configurations: `naive` (vector search only), `hybrid`, `+hyde`, `+graph`, `+rerank`, `+routing`, `routing+rerank`, `+fusion`, `+crag`, `routing+rerank+fusion`, `app-default` and `full`. Reports go to `eval/results/<timestamp>/`. Long runs can be continued with `--resume <folder>`, and `python -m eval.analyze_answers <folder>` adds strict accuracy, refusal rate and numeric match on top of the LLM judge.
 
 <br/>
 
@@ -178,7 +196,9 @@ The sidebar lists every model installed in Ollama, so you can switch without cha
 | `qwen3:8b`, `deepseek-r1:8b` | Reasoning models; the reasoning panel shows their real thinking |
 | `llama3.1:70b` | Much better answers if you have the hardware |
 
-On a CPU-only laptop, expect around 20–30 seconds per answer with an 8B model. A GPU makes it several times faster.
+On a laptop, expect roughly 30–90 seconds per answer with an 8B model; a GPU that fits the whole model is several times faster.
+
+> **Keep one Ollama.** Index and ask questions with the same Ollama install and embedding model. If they change (for example a second Ollama version on the same machine), stored and new embeddings stop matching; the app detects this and asks you to re-index.
 
 <br/>
 
@@ -235,13 +255,14 @@ Then pull the models into the Ollama container once: `docker compose exec ollama
 ```
 app.py                     Streamlit UI
 utils/
-  retriever_pipeline.py    query-time pipeline (rewrite → search → graph → rerank → CRAG)
+  retriever_pipeline.py    query-time pipeline (rewrite → route → search → graph → rerank → CRAG)
+  routing.py               source routing: match names in the question to file names
   advanced_rag.py          HyDE, RAG-Fusion/RRF, CRAG grading, contextual retrieval, query rewriting
   build_graph.py           entity co-occurrence graph
   store.py                 saved knowledge bases, pipeline assembly
   loaders.py               PDF / DOCX / TXT / MD loading and chunking
   generation.py            prompt building, <think> stream parsing, citations
-eval/                      evaluation harness, FinanceBench loader, sample data
+eval/                      evaluation harness, strict answer scoring, FinanceBench loader, sample data
 tests/                     pytest suite (run: pip install -r requirements-dev.txt && python -m pytest)
 ```
 
@@ -254,10 +275,12 @@ Worth knowing before you rely on it:
 - **Single user.** There is no login and no per-document permissions. Don't expose it to the internet as is.
 - **No OCR.** Scanned PDFs without a text layer come through empty.
 - **Tables are extracted as plain text**, which loses some structure in financial statements.
+- **Arithmetic.** With an 8B model, questions that need a calculation (ratios, margins) are the weak spot even when the right page is found.
+- **Routing relies on file names.** It helps when files are named after what they contain; a folder of `scan_0042.pdf` files won't benefit.
 - **Speed depends on your hardware.** RAG-Fusion, CRAG and Contextual Retrieval add LLM calls; turn on only what helps (the eval harness tells you which).
 - **Streamlit UI.** There's no REST API yet.
 
-Planned next: a FastAPI backend, authentication with document-level permissions, OCR, full CRAG with re-querying, and LLM-extracted entity graphs.
+Planned next: a calculator tool for numeric questions, better table extraction, a FastAPI backend, authentication with document-level permissions, and OCR.
 
 <br/>
 
