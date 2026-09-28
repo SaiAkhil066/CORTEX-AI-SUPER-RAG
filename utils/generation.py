@@ -9,6 +9,10 @@ import os
 NUM_CTX_MIN = 4096
 NUM_CTX_MAX = int(os.getenv("NUM_CTX_MAX", "16384"))
 ANSWER_TOKEN_BUDGET = 1536
+# Hard cap on generated tokens. Without it, a model that falls into a repetition
+# loop keeps generating until the context is full, and Ollama keeps going even
+# after the client times out, blocking every later request.
+MAX_ANSWER_TOKENS = int(os.getenv("NUM_PREDICT", "2048"))
 
 
 def source_label(metadata):

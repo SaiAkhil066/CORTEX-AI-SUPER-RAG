@@ -25,7 +25,7 @@ def _ollama_generate(uri, model, prompt, temperature=0.0, timeout=60):
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": temperature},
+                "options": {"temperature": temperature, "num_predict": 512},
             },
             timeout=timeout,
         )

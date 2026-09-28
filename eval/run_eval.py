@@ -40,7 +40,7 @@ import requests  # noqa: E402
 from utils import store  # noqa: E402
 from utils.loaders import SUPPORTED_TYPES, load_path, split_documents  # noqa: E402
 from utils.retriever_pipeline import retrieve_documents  # noqa: E402
-from utils.generation import build_prompt, format_context, estimate_num_ctx, ThinkStreamParser  # noqa: E402
+from utils.generation import build_prompt, format_context, estimate_num_ctx, ThinkStreamParser, MAX_ANSWER_TOKENS  # noqa: E402
 from utils.advanced_rag import _ollama_generate  # noqa: E402
 from eval.metrics import (  # noqa: E402
     first_hit_rank, first_doc_hit_rank, summarize_retrieval, parse_score, mean,
@@ -187,7 +187,7 @@ def generate(question, docs, crag, uri, model):
     try:
         r = requests.post(uri, json={
             "model": model, "prompt": prompt, "stream": False,
-            "options": {"temperature": 0.0, "num_ctx": estimate_num_ctx(prompt)},
+            "options": {"temperature": 0.0, "num_ctx": estimate_num_ctx(prompt), "num_predict": MAX_ANSWER_TOKENS},
         }, timeout=900)
         parser = ThinkStreamParser()
         parser.feed(r.json().get("response", ""))

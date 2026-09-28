@@ -10,7 +10,7 @@ from utils.doc_handler import (
     process_documents, reset_documents, load_collection_into_session, SUPPORTED_TYPES,
 )
 from utils.generation import (
-    build_prompt, format_context, source_record, estimate_num_ctx, ThinkStreamParser,
+    build_prompt, format_context, source_record, estimate_num_ctx, ThinkStreamParser, MAX_ANSWER_TOKENS,
 )
 from utils.advanced_rag import cosine_similarity
 from utils import store
@@ -705,6 +705,7 @@ def generate_response(prompt_text: str, model: str):
                 "options": {
                     "temperature": st.session_state.temperature,
                     "num_ctx": estimate_num_ctx(system_prompt),
+                    "num_predict": MAX_ANSWER_TOKENS,
                 },
             },
             stream=True,
