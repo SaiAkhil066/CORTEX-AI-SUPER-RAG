@@ -110,7 +110,23 @@ The GraphRAG here is a heuristic entity co-occurrence graph, not Microsoft's Gra
 
 We're running Cortex on [FinanceBench](https://arxiv.org/abs/2311.11944): 150 questions written by financial analysts over 84 real SEC filings, most of them numerical and table-heavy. For reference, the 2023 paper reports that GPT-4 Turbo with a standard retrieval setup answered 81% of these questions incorrectly or refused.
 
-**Status: running now, fully local (Llama 3.1 8B, nomic-embed-text, a laptop CPU).** Results for every pipeline configuration, including a plain vector-search baseline, will be posted here with the raw per-question output. They won't be cherry-picked.
+**Results** (fully local: Llama 3.1 8B + nomic-embed-text on Ollama, laptop; top 5 passages per question):
+
+| Retrieval setup | Evidence page in top 5 | Right filing in top 5 | Seconds / question |
+|---|---|---|---|
+| Plain vector search | 25% | 78% | 0.2 |
+| Hybrid (BM25 + vector) | 25% | 71% | 0.7 |
+| + RAG-Fusion | 32% | 86% | 14 |
+| **+ source routing + reranker** (default) | **39%** | **93%** | **2.2** |
+| + routing + reranker + HyDE + graph | 41% | 95% | 21 |
+| Everything on (incl. CRAG) | 33% | 87% | 47 |
+
+| Answers (150 questions) | Plain vector search | Routing + reranker |
+|---|---|---|
+| Correct (strict: judged correct and not a refusal) | 36% | **45%** |
+| Refused ("not in the sources") | 55% | 43% |
+
+What we took from it: source routing plus a reranker does most of the work at almost no cost; LLM-based extras add little on top; CRAG with a small grader drops useful passages; and when retrieval misses, the model mostly says so rather than inventing numbers. Calculations (ratios, margins) remain the weak spot for an 8B model. Grading uses an 8B judge plus strict rules, not human review. Full write-up, caveats and per-question output are produced by the harness.
 
 To reproduce it yourself:
 
